@@ -1,11 +1,15 @@
 """Mock 确定性演示数据:覆盖 PRD §12 的 6 个验收场景。
 
-mock 模式(无 GEMINI_API_KEY)时,拍照诊断按文件名关键词路由到场景;
-无关键词时按图片字节数哈希确定性地轮换——同一张图永远得到同一结果。
+mock 模式(无 GEMINI_API_KEY)时,拍照诊断按以下优先级路由到场景:
+文件名关键词 → 演示照片均值色指纹(经相册重编码仍稳定) → 内容哈希轮换。
+同一张图永远得到同一结果。
 """
 from __future__ import annotations
 
 import hashlib
+import io
+
+from PIL import Image
 
 MOCK_SCENARIOS: dict[str, dict] = {
     "router": {
@@ -88,11 +92,41 @@ _KEYWORDS = {
 
 
 def route(filename: str | None, image_bytes: bytes) -> dict:
-    """文件名关键词优先;否则按内容哈希确定性轮换(同图永远同场景)。"""
+    """文件名关键词优先;其次演示照片均值色指纹;最后内容哈希确定性轮换。"""
     name = (filename or "").lower()
     for key, words in _KEYWORDS.items():
         if any(w in name for w in words):
             return MOCK_SCENARIOS[key]
+    matched = _match_photo(image_bytes)
+    if matched:
+        return MOCK_SCENARIOS[matched]
     digest = int(hashlib.md5(image_bytes).hexdigest(), 16)
     safe = ["router", "washer", "ikea", "water_heater"]  # 拒答场景不进哈希轮换
     return MOCK_SCENARIOS[safe[digest % len(safe)]]
+
+
+# demo-photos/ 四张合成图的均值色指纹(Pillow 重采样 64x64 后实测)
+_PHOTO_FINGERPRINTS = {
+    "ikea": (231, 226, 214),
+    "microwave": (158, 158, 163),
+    "router": (183, 184, 190),
+    "washer": (208, 208, 213),
+}
+
+_MATCH_THRESHOLD = 40  # 指纹最近距离上限,超出视为未知照片
+
+
+def _match_photo(image_bytes: bytes) -> str | None:
+    try:
+        im = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((64, 64))
+    except Exception:
+        return None
+    data = list(im.getdata())
+    n = len(data)
+    mean = tuple(sum(p[i] for p in data) // n for i in range(3))
+    best, best_dist = None, None
+    for key, fp in _PHOTO_FINGERPRINTS.items():
+        dist = sum((mean[i] - fp[i]) ** 2 for i in range(3)) ** 0.5
+        if best_dist is None or dist < best_dist:
+            best, best_dist = key, dist
+    return best if best_dist is not None and best_dist < _MATCH_THRESHOLD else None

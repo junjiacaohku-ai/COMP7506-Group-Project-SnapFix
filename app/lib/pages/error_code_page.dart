@@ -44,13 +44,6 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
     }
   }
 
-  void _fillExample() {
-    setState(() {
-      _brandController.text = 'Bosch';
-      _codeController.text = 'E24';
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,52 +118,6 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? '请输入错误码' : null,
                     onFieldSubmitted: (_) => _submit(),
-                  ),
-                  const SizedBox(height: 14),
-                  Material(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(18),
-                    child: InkWell(
-                      onTap: _fillExample,
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.play_circle_outline_rounded,
-                              color: AppColors.primary,
-                              size: 21,
-                            ),
-                            SizedBox(width: 11),
-                            Expanded(
-                              child: Text(
-                                '使用演示示例',
-                                style: TextStyle(
-                                  color: AppColors.secondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              'Bosch · E24',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 24),
                   GradientButton(

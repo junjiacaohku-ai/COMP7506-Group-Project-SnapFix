@@ -20,18 +20,8 @@ class AnalyzingPage extends StatefulWidget {
 
 class _AnalyzingPageState extends State<AnalyzingPage>
     with TickerProviderStateMixin {
-  static const _stages = [
-    (icon: Icons.document_scanner_outlined, label: '识别设备', hint: '正在辨认设备与错误码'),
-    (icon: Icons.menu_book_outlined, label: '检索手册', hint: '正在查找相关官方手册'),
-    (icon: Icons.shield_outlined, label: '安全评估', hint: '正在排查触电、燃气等风险'),
-    (icon: Icons.format_list_numbered, label: '整理方案', hint: '正在生成分步维修指引'),
-  ];
-  static const _stageDuration = Duration(milliseconds: 1000);
-
   late final AnimationController _spin;
   late final AnimationController _pulse;
-  int _activeStage = 0;
-  int _doneCount = 0;
 
   @override
   void initState() {
@@ -57,40 +47,23 @@ class _AnalyzingPageState extends State<AnalyzingPage>
   }
 
   Future<void> _run() async {
-    Session? session;
-    Object? error;
-    final request = () async {
-      try {
-        session = await widget.start();
-      } catch (e) {
-        error = e;
-      }
-    }();
-
-    for (var i = 0; i < _stages.length; i++) {
+    try {
+      final result = await widget.start();
       if (!mounted) return;
-      setState(() => _activeStage = i);
-      await Future<void>.delayed(_stageDuration);
-      if (!mounted) return;
-      setState(() => _doneCount = i + 1);
-    }
-
-    await request;
-    if (!mounted) return;
-
-    final result = session;
-    final failure = error;
-    if (result != null) {
       await Navigator.of(context).pushReplacement(
         AppPageRoute(
           child: ResultPage(api: widget.api, session: result),
         ),
       );
-    } else if (failure is ApiException && failure.isQualityError) {
-      _showQualityDialog(failure.message);
-    } else {
-      Navigator.of(context)
-          .pop(failure is ApiException ? failure.message : '网络异常，请稍后重试');
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      if (error.isQualityError) {
+        _showQualityDialog(error.message);
+      } else {
+        Navigator.of(context).pop(error.message);
+      }
+    } catch (_) {
+      if (mounted) Navigator.of(context).pop('网络异常，请稍后重试');
     }
   }
 
@@ -123,7 +96,6 @@ class _AnalyzingPageState extends State<AnalyzingPage>
 
   @override
   Widget build(BuildContext context) {
-    final stage = _stages[_activeStage.clamp(0, _stages.length - 1)];
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -138,7 +110,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                       BrandMark(size: 34),
                       SizedBox(width: 10),
                       Text(
-                        'SNAPFIX AI',
+                        'SNAPFIX',
                         style: TextStyle(
                           color: AppColors.secondary,
                           fontSize: 12,
@@ -149,10 +121,10 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                     ],
                   ),
                   const Spacer(),
-                  _buildOrb(stage.icon),
-                  const SizedBox(height: 26),
+                  _buildOrb(),
+                  const SizedBox(height: 28),
                   const Text(
-                    '正在分析故障',
+                    '正在生成诊断',
                     style: TextStyle(
                       color: AppColors.text,
                       fontSize: 27,
@@ -160,22 +132,47 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                       letterSpacing: -0.7,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 320),
-                    child: Text(
-                      stage.hint,
-                      key: ValueKey(_activeStage),
-                      style: const TextStyle(
-                        color: AppColors.secondary,
-                        fontSize: 14,
-                      ),
+                  const SizedBox(height: 11),
+                  const Text(
+                    '设备识别、手册检索与安全评估正在处理中',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 13,
+                      height: 1.55,
                     ),
                   ),
+                  const SizedBox(height: 7),
+                  const Text(
+                    '耗时取决于照片与网络状况',
+                    style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  ),
                   const Spacer(),
-                  _buildProgress(),
-                  const SizedBox(height: 16),
-                  _buildStageList(),
+                  const SurfaceCard(
+                    radius: 24,
+                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                    child: Column(
+                      children: [
+                        _ProcessRow(
+                          icon: Icons.document_scanner_outlined,
+                          label: '设备与故障识别',
+                          description: '辨认设备、铭牌和可见错误码',
+                        ),
+                        SizedBox(height: 18),
+                        _ProcessRow(
+                          icon: Icons.menu_book_outlined,
+                          label: '手册与安全核验',
+                          description: '检索相关资料并检查高风险场景',
+                        ),
+                        SizedBox(height: 18),
+                        _ProcessRow(
+                          icon: Icons.format_list_numbered_rounded,
+                          label: '生成维修建议',
+                          description: '整理是否适合自己修与分步指引',
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -185,7 +182,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
     );
   }
 
-  Widget _buildOrb(IconData icon) {
+  Widget _buildOrb() {
     return SizedBox(
       width: 198,
       height: 198,
@@ -249,189 +246,67 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                 ),
               ],
             ),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, animation) =>
-                  ScaleTransition(scale: animation, child: child),
-              child: Icon(
-                icon,
-                key: ValueKey(icon),
-                size: 42,
-                color: Colors.white,
-              ),
+            child: const Icon(
+              Icons.document_scanner_outlined,
+              size: 42,
+              color: Colors.white,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgress() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            const Text(
-              '诊断进度',
-              style: TextStyle(color: AppColors.secondary, fontSize: 12),
-            ),
-            const Spacer(),
-            Text(
-              '$_doneCount / ${_stages.length}',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 9),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: TweenAnimationBuilder<double>(
-            duration: const Duration(milliseconds: 450),
-            curve: Curves.easeOut,
-            tween: Tween(end: _doneCount / _stages.length),
-            builder: (_, value, _) => LinearProgressIndicator(
-              value: value,
-              minHeight: 4,
-              backgroundColor: AppColors.border,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStageList() {
-    return SurfaceCard(
-      radius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Column(
-        children: [
-          for (var i = 0; i < _stages.length; i++) ...[
-            _StageRow(
-              icon: _stages[i].icon,
-              label: _stages[i].label,
-              state: i < _doneCount
-                  ? _StageState.done
-                  : i == _activeStage
-                  ? _StageState.active
-                  : _StageState.pending,
-            ),
-            if (i < _stages.length - 1) const SizedBox(height: 13),
-          ],
         ],
       ),
     );
   }
 }
 
-enum _StageState { pending, active, done }
-
-class _StageRow extends StatelessWidget {
-  const _StageRow({
+class _ProcessRow extends StatelessWidget {
+  const _ProcessRow({
     required this.icon,
     required this.label,
-    required this.state,
+    required this.description,
   });
 
   final IconData icon;
   final String label;
-  final _StageState state;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
-    final active = state == _StageState.active;
-    final done = state == _StageState.done;
-    final color = done
-        ? AppColors.green
-        : active
-        ? AppColors.primary
-        : AppColors.muted;
     return Row(
       children: [
-        SizedBox(
-          width: 32,
-          height: 32,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            transitionBuilder: (child, animation) =>
-                ScaleTransition(scale: animation, child: child),
-            child: done
-                ? const _StageBadge(
-                    key: ValueKey('done'),
-                    color: AppColors.green,
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 18,
-                      color: AppColors.background,
-                    ),
-                  )
-                : active
-                ? const _StageBadge(
-                    key: ValueKey('active'),
-                    color: AppColors.primary,
-                    child: SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.background,
-                      ),
-                    ),
-                  )
-                : _StageBadge(
-                    key: const ValueKey('pending'),
-                    color: AppColors.border,
-                    child: Icon(icon, size: 16, color: AppColors.muted),
-                  ),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Icon(icon, color: AppColors.primary, size: 19),
         ),
         const SizedBox(width: 13),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 14,
-            fontWeight: active || done ? FontWeight.w600 : FontWeight.w500,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(
+                  color: AppColors.secondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
         ),
-        const Spacer(),
-        if (done)
-          const Text(
-            '完成',
-            style: TextStyle(color: AppColors.green, fontSize: 11),
-          )
-        else if (active)
-          const Text(
-            '进行中',
-            style: TextStyle(color: AppColors.primary, fontSize: 11),
-          ),
       ],
-    );
-  }
-}
-
-class _StageBadge extends StatelessWidget {
-  const _StageBadge({super.key, required this.color, required this.child});
-
-  final Color color;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color == AppColors.border ? AppColors.surfaceRaised : color,
-        border: Border.all(color: color, width: 1.2),
-      ),
-      alignment: Alignment.center,
-      child: child,
     );
   }
 }

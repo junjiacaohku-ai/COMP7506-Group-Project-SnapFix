@@ -8,16 +8,16 @@ import 'error_code_page.dart';
 import 'scan_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.api});
+  const HomePage({super.key, required this.api, required this.user});
 
   final ApiClient api;
+  final AuthUser user;
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  HealthInfo? _health;
   bool _offline = false;
 
   @override
@@ -28,18 +28,12 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _checkHealth() async {
     try {
-      final health = await widget.api.health();
+      await widget.api.health();
       if (!mounted) return;
-      setState(() {
-        _health = health;
-        _offline = false;
-      });
+      setState(() => _offline = false);
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _health = null;
-        _offline = true;
-      });
+      setState(() => _offline = true);
     }
   }
 
@@ -90,8 +84,26 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  if (_health?.mock ?? false)
-                    const AppPill(label: '演示模式', icon: Icons.bolt_rounded),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.22),
+                      ),
+                    ),
+                    child: Text(
+                      widget.user.initials,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               if (_offline) ...[
@@ -99,9 +111,9 @@ class _HomePageState extends State<HomePage> {
                 _OfflineBanner(onRetry: _checkHealth),
               ],
               const SizedBox(height: 34),
-              const Text(
-                '先搞懂，再决定。',
-                style: TextStyle(
+              Text(
+                '你好，${widget.user.name}',
+                style: const TextStyle(
                   color: AppColors.primary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -110,18 +122,18 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                '拍张照片，\n把故障看明白。',
+                '今天想修什么？',
                 style: TextStyle(
                   color: AppColors.text,
-                  fontSize: 34,
+                  fontSize: 32,
                   fontWeight: FontWeight.w800,
                   height: 1.18,
-                  letterSpacing: -1.2,
+                  letterSpacing: -1.0,
                 ),
               ),
               const SizedBox(height: 12),
               const Text(
-                '识别设备与错误码，结合官方手册，\n给你安全、可执行的维修建议。',
+                '拍照识别设备与错误码，\n获取带手册来源的维修建议。',
                 style: TextStyle(
                   color: AppColors.secondary,
                   fontSize: 14,
@@ -262,8 +274,8 @@ class _ScanHero extends StatelessWidget {
                 top: 18,
                 left: 18,
                 child: AppPill(
-                  label: 'AI 视觉诊断',
-                  icon: Icons.auto_awesome_rounded,
+                  label: '拍照诊断',
+                  icon: Icons.photo_camera_outlined,
                 ),
               ),
               Positioned(

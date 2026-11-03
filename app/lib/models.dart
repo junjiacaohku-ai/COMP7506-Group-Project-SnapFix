@@ -2,6 +2,46 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
+class AuthUser {
+  const AuthUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.createdAt,
+  });
+
+  factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
+    id: json['id'] as String,
+    name: json['name'] as String,
+    email: json['email'] as String,
+    createdAt:
+        DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
+        DateTime.now(),
+  );
+
+  final String id;
+  final String name;
+  final String email;
+  final DateTime createdAt;
+
+  String get initials {
+    final trimmed = name.trim();
+    return trimmed.isEmpty ? 'S' : trimmed.characters.first.toUpperCase();
+  }
+}
+
+class AuthResult {
+  const AuthResult({required this.token, required this.user});
+
+  factory AuthResult.fromJson(Map<String, dynamic> json) => AuthResult(
+    token: json['token'] as String,
+    user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
+  );
+
+  final String token;
+  final AuthUser user;
+}
+
 class HealthInfo {
   const HealthInfo({
     required this.status,

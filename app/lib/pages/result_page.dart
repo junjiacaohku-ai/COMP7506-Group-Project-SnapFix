@@ -69,7 +69,7 @@ class _ResultPageState extends State<ResultPage> {
           Padding(
             padding: EdgeInsets.only(right: 20),
             child: Center(
-              child: AppPill(label: 'AI + 官方手册', icon: Icons.verified_outlined),
+              child: AppPill(label: '手册溯源', icon: Icons.verified_outlined),
             ),
           ),
         ],

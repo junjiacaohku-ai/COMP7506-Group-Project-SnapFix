@@ -26,16 +26,86 @@ class ApiClient {
 
   final http.Client _client;
   final String baseUrl;
+  String? _accessToken;
+  void Function()? onUnauthorized;
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
+
+  void setAccessToken(String? token) {
+    _accessToken = token;
+  }
+
+  Map<String, String> get _authHeaders => {
+    if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+  };
+
+  Map<String, String> get _jsonHeaders => {
+    'Content-Type': 'application/json',
+    ..._authHeaders,
+  };
 
   Future<HealthInfo> health() async {
     final json = await _send(() => _client.get(_uri('/api/health')));
     return HealthInfo.fromJson(json as Map<String, dynamic>);
   }
 
+  Future<AuthResult> register(
+    String name,
+    String email,
+    String password,
+  ) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/register'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+      ),
+    );
+    return AuthResult.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AuthResult> login(String email, String password) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/login'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'email': email, 'password': password}),
+      ),
+    );
+    return AuthResult.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> me() async {
+    final json = await _send(
+      () => _client.get(_uri('/api/auth/me'), headers: _authHeaders),
+    );
+    return AuthUser.fromJson(
+      (json as Map<String, dynamic>)['user'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<AuthUser> updateName(String name) async {
+    final json = await _send(
+      () => _client.patch(
+        _uri('/api/auth/me'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'name': name}),
+      ),
+    );
+    return AuthUser.fromJson(
+      (json as Map<String, dynamic>)['user'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> logout() async {
+    await _send(
+      () => _client.post(_uri('/api/auth/logout'), headers: _authHeaders),
+    );
+  }
+
   Future<Session> analyzeImage(String filePath) async {
     final request = http.MultipartRequest('POST', _uri('/api/analyze/image'))
+      ..headers.addAll(_authHeaders)
       ..files.add(await http.MultipartFile.fromPath('file', filePath));
     final streamed = await _client
         .send(request)
@@ -49,7 +119,7 @@ class ApiClient {
     final json = await _send(
       () => _client.post(
         _uri('/api/diagnose/manual'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
         body: jsonEncode({'brand': brand, 'error_code': errorCode}),
       ),
     );
@@ -57,19 +127,25 @@ class ApiClient {
   }
 
   Future<List<Session>> listSessions() async {
-    final json = await _send(() => _client.get(_uri('/api/sessions')));
+    final json = await _send(
+      () => _client.get(_uri('/api/sessions'), headers: _authHeaders),
+    );
     return [
       for (final s in json as List) Session.fromJson(s as Map<String, dynamic>),
     ];
   }
 
   Future<Session> getSession(String id) async {
-    final json = await _send(() => _client.get(_uri('/api/sessions/$id')));
+    final json = await _send(
+      () => _client.get(_uri('/api/sessions/$id'), headers: _authHeaders),
+    );
     return Session.fromJson(json as Map<String, dynamic>);
   }
 
   Future<void> deleteSession(String id) async {
-    await _send(() => _client.delete(_uri('/api/sessions/$id')));
+    await _send(
+      () => _client.delete(_uri('/api/sessions/$id'), headers: _authHeaders),
+    );
   }
 
   Future<Session> stepFeedback(
@@ -80,7 +156,7 @@ class ApiClient {
     final json = await _send(
       () => _client.post(
         _uri('/api/sessions/$sessionId/steps/$stepId/feedback'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
         body: jsonEncode({'feedback': feedback}),
       ),
     );
@@ -91,7 +167,7 @@ class ApiClient {
     final json = await _send(
       () => _client.post(
         _uri('/api/sessions/$sessionId/report'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _jsonHeaders,
         body: jsonEncode({'lang': lang}),
       ),
     );
@@ -103,7 +179,7 @@ class ApiClient {
     try {
       response = await call().timeout(const Duration(seconds: 30));
     } on TimeoutException {
-      throw const ApiException('请求超时,请检查网络后重试');
+      throw const ApiException('请求超时，请检查网络后重试');
     } on SocketException {
       throw const ApiException('无法连接后端服务');
     } on http.ClientException {
@@ -120,9 +196,15 @@ class ApiClient {
       json = null;
     }
     if (statusCode >= 200 && statusCode < 300) return json;
-    final detail = json is Map<String, dynamic>
-        ? json['detail'] as String?
+    if (statusCode == 401 && _accessToken != null) {
+      onUnauthorized?.call();
+    }
+    final detail = json is Map<String, dynamic> ? json['detail'] : null;
+    final message = detail is String
+        ? detail
+        : detail is List
+        ? detail.map((item) => item['msg'].toString()).join('；')
         : null;
-    throw ApiException(detail ?? '请求失败($statusCode)', statusCode: statusCode);
+    throw ApiException(message ?? '请求失败($statusCode)', statusCode: statusCode);
   }
 }

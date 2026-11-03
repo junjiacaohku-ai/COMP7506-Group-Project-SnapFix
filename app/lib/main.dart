@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'auth.dart';
 import 'pages/archive_page.dart';
+import 'pages/auth_page.dart';
 import 'pages/home_page.dart';
+import 'pages/profile_page.dart';
 import 'theme.dart';
+import 'ui.dart';
 
 void main() {
-  runApp(const SnapFixApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  final api = ApiClient();
+  final auth = AuthController(api: api);
+  runApp(SnapFixApp(api: api, auth: auth));
 }
 
 class SnapFixApp extends StatelessWidget {
-  const SnapFixApp({super.key});
+  const SnapFixApp({super.key, required this.api, required this.auth});
+
+  final ApiClient api;
+  final AuthController auth;
 
   @override
   Widget build(BuildContext context) {
@@ -18,21 +28,153 @@ class SnapFixApp extends StatelessWidget {
       title: 'SnapFix 随手修',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const MainScaffold(),
+      home: AuthGate(api: api, auth: auth),
+    );
+  }
+}
+
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key, required this.api, required this.auth});
+
+  final ApiClient api;
+  final AuthController auth;
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  @override
+  void initState() {
+    super.initState();
+    widget.auth.restore();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.auth,
+      builder: (_, _) {
+        if (widget.auth.restoring) return const _RestoringView();
+        if (widget.auth.restoreError != null) {
+          return _RestoreErrorView(auth: widget.auth);
+        }
+        if (widget.auth.user == null) {
+          return AuthPage(auth: widget.auth);
+        }
+        return MainScaffold(api: widget.api, auth: widget.auth);
+      },
+    );
+  }
+}
+
+class _RestoringView extends StatelessWidget {
+  const _RestoringView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: AppBackground(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BrandMark(size: 58),
+              SizedBox(height: 22),
+              Text(
+                'SnapFix 随手修',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RestoreErrorView extends StatelessWidget {
+  const _RestoreErrorView({required this.auth});
+
+  final AuthController auth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AppBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.cloud_off_outlined,
+                  color: AppColors.primary,
+                  size: 48,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  '暂时无法恢复账号',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  auth.restoreError!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 14,
+                    height: 1.55,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GradientButton(
+                  label: '重新连接',
+                  icon: Icons.refresh_rounded,
+                  onPressed: auth.restore,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: auth.logout,
+                  child: const Text('退出此设备上的账号'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  const MainScaffold({super.key, required this.api, required this.auth});
+
+  final ApiClient api;
+  final AuthController auth;
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  final _api = ApiClient();
   final _archiveKey = GlobalKey<ArchivePageState>();
+  final _profileKey = GlobalKey<ProfilePageState>();
   int _index = 0;
 
   @override
@@ -41,8 +183,9 @@ class _MainScaffoldState extends State<MainScaffold> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomePage(api: _api),
-          ArchivePage(key: _archiveKey, api: _api),
+          HomePage(api: widget.api, user: widget.auth.user!),
+          ArchivePage(key: _archiveKey, api: widget.api),
+          ProfilePage(key: _profileKey, api: widget.api, auth: widget.auth),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -67,18 +210,28 @@ class _MainScaffoldState extends State<MainScaffold> {
               _NavItem(
                 icon: Icons.document_scanner_outlined,
                 selectedIcon: Icons.document_scanner_rounded,
-                label: '智能诊断',
+                label: '诊断',
                 selected: _index == 0,
                 onTap: () => setState(() => _index = 0),
               ),
               _NavItem(
                 icon: Icons.inventory_2_outlined,
                 selectedIcon: Icons.inventory_2_rounded,
-                label: '诊断档案',
+                label: '档案',
                 selected: _index == 1,
                 onTap: () {
                   setState(() => _index = 1);
                   _archiveKey.currentState?.reload();
+                },
+              ),
+              _NavItem(
+                icon: Icons.person_outline_rounded,
+                selectedIcon: Icons.person_rounded,
+                label: '我的',
+                selected: _index == 2,
+                onTap: () {
+                  setState(() => _index = 2);
+                  _profileKey.currentState?.reload();
                 },
               ),
             ],
@@ -130,7 +283,7 @@ class _NavItem extends StatelessWidget {
                   size: 21,
                   color: selected ? AppColors.primary : AppColors.secondary,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 7),
                 Text(
                   label,
                   style: TextStyle(

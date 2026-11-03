@@ -36,7 +36,7 @@ def quality_gate(image_bytes: bytes) -> None:
         raise QualityError("照片模糊,请拿稳对焦后重拍")
 
 
-def _persist(session: dict, conn) -> dict:
+def _persist(session: dict, conn, user_id) -> dict:
     import uuid
     from datetime import datetime, timezone
 
@@ -44,9 +44,15 @@ def _persist(session: dict, conn) -> dict:
     session["created_at"] = datetime.now(timezone.utc).isoformat()
     session.setdefault("safety_refused", False)
     conn.execute(
-        "INSERT INTO sessions VALUES (:id,:device_category,:brand,:model,:error_code,"
-        ":decision,:decision_reason,:safety_refused,:created_at)",
-        {**session, "safety_refused": int(session["safety_refused"])},
+        "INSERT INTO sessions (id,device_category,brand,model,error_code,"
+        "decision,decision_reason,safety_refused,created_at,user_id) "
+        "VALUES (:id,:device_category,:brand,:model,:error_code,"
+        ":decision,:decision_reason,:safety_refused,:created_at,:user_id)",
+        {
+            **session,
+            "user_id": user_id,
+            "safety_refused": int(session["safety_refused"]),
+        },
     )
     for i, (content, manual, section) in enumerate(session.pop("steps"), start=1):
         step = {"id": str(uuid.uuid4()), "session_id": session["id"], "idx": i,
@@ -63,15 +69,15 @@ def _mock_session(image_bytes: bytes, filename: str | None) -> dict:
     return dict(mock_data.route(filename, image_bytes))
 
 
-def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn) -> dict:
+def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn, user_id) -> dict:
     quality_gate(image_bytes)  # 质量门对 mock/真实模式同样生效(场景 5 靠它)
 
     if mock:
-        return _persist(_mock_session(image_bytes, filename), conn)
+        return _persist(_mock_session(image_bytes, filename), conn, user_id)
 
     vision = providers.gemini_extract(image_bytes)
     if vision is None:
-        return _persist(_mock_session(image_bytes, filename), conn)
+        return _persist(_mock_session(image_bytes, filename), conn, user_id)
 
     verdict = safety_gate.check(vision.device_category, vision.brand,
                                 *vision.visible_faults)
@@ -81,14 +87,14 @@ def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn) ->
             "model": vision.model, "error_code": vision.error_code,
             "decision": "refused", "decision_reason": f"{verdict.reason}{verdict.advice}",
             "safety_refused": True, "steps": [],
-        }, conn)
+        }, conn, user_id)
 
     query = f"{vision.device_category} {vision.brand or ''} {vision.error_code or ''} " \
             f"{' '.join(vision.visible_faults)}"
     chunks = retrieval.search(query, vision.device_category, vision.error_code)
     gen = providers.gemini_generate(vision, chunks)
     if gen is None:  # 生成失败或语料空:降级 mock,前端标注演示数据
-        return _persist(_mock_session(image_bytes, filename), conn)
+        return _persist(_mock_session(image_bytes, filename), conn, user_id)
 
     # 引用校验:引用不在检索到的片段集合内的步骤丢弃(宁缺毋假)
     valid = {(c["manual"], c["section"]) for c in chunks}
@@ -99,10 +105,10 @@ def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn) ->
         "model": vision.model, "error_code": vision.error_code,
         "decision": gen.decision, "decision_reason": gen.decision_reason,
         "steps": steps,
-    }, conn)
+    }, conn, user_id)
 
 
-def diagnose_manual(brand: str, error_code: str, mock: bool, conn) -> dict:
+def diagnose_manual(brand: str, error_code: str, mock: bool, conn, user_id) -> dict:
     verdict = safety_gate.check(brand, error_code)
     if verdict.refused:
         return _persist({
@@ -110,18 +116,18 @@ def diagnose_manual(brand: str, error_code: str, mock: bool, conn) -> dict:
             "error_code": error_code, "decision": "refused",
             "decision_reason": f"{verdict.reason}{verdict.advice}",
             "safety_refused": True, "steps": [],
-        }, conn)
+        }, conn, user_id)
 
     chunks = retrieval.search(f"{brand} {error_code}", None, error_code)
     if mock:
         return _persist(_mock_session(f"{brand}{error_code}".encode(), "e24"
-                                      if error_code.strip().lower() == "e24" else ""), conn)
+                                      if error_code.strip().lower() == "e24" else ""), conn, user_id)
 
     vision = providers.VisionResult(device_category="unknown", brand=brand,
                                     error_code=error_code, confidence=1.0)
     gen = providers.gemini_generate(vision, chunks) if chunks else None
     if gen is None:
-        return _persist(_mock_session(f"{brand}{error_code}".encode(), ""), conn)
+        return _persist(_mock_session(f"{brand}{error_code}".encode(), ""), conn, user_id)
     valid = {(c["manual"], c["section"]) for c in chunks}
     steps = [(s.content, s.citation_manual, s.citation_section)
              for s in gen.steps if (s.citation_manual, s.citation_section) in valid]
@@ -129,4 +135,4 @@ def diagnose_manual(brand: str, error_code: str, mock: bool, conn) -> dict:
         "device_category": "unknown", "brand": brand, "model": None,
         "error_code": error_code, "decision": gen.decision,
         "decision_reason": gen.decision_reason, "steps": steps,
-    }, conn)
+    }, conn, user_id)

@@ -75,11 +75,11 @@ class _ScanPageState extends State<ScanPage> {
         const SizedBox(height: 10),
         const Align(
           alignment: Alignment.centerLeft,
-          child: AppPill(label: 'AI 视觉识别', icon: Icons.auto_awesome_rounded),
+          child: AppPill(label: '拍摄故障照片', icon: Icons.photo_camera_outlined),
         ),
         const SizedBox(height: 18),
         const Text(
-          '让 AI 看清问题',
+          '对准故障，拍清楚',
           style: TextStyle(
             color: AppColors.text,
             fontSize: 29,

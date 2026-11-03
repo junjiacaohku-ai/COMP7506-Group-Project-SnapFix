@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api.dart';
 import 'models.dart';
+import 'social_auth.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController({required this.api, FlutterSecureStorage? storage})
@@ -25,6 +26,7 @@ class AuthController extends ChangeNotifier {
 
   final ApiClient api;
   final FlutterSecureStorage _storage;
+  late final SocialAuthService social = SocialAuthService(api: api);
 
   AuthUser? _user;
   bool _restoring = true;
@@ -67,6 +69,16 @@ class AuthController extends ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     final result = await api.login(email.trim(), password);
+    await _acceptSession(result);
+  }
+
+  Future<void> loginWithApple() async {
+    final result = await social.signInWithApple();
+    await _acceptSession(result);
+  }
+
+  Future<void> loginWithGoogle() async {
+    final result = await social.signInWithGoogle();
     await _acceptSession(result);
   }
 

@@ -167,7 +167,7 @@ class ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              user.email,
+                              user.email ?? '第三方账号登录',
                               style: const TextStyle(
                                 color: AppColors.secondary,
                                 fontSize: 12,

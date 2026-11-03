@@ -75,6 +75,43 @@ class ApiClient {
     return AuthResult.fromJson(json as Map<String, dynamic>);
   }
 
+  Future<String> appleNonce() async {
+    final json = await _send(
+      () => _client.post(_uri('/api/auth/apple/nonce'), headers: _jsonHeaders),
+    );
+    return (json as Map<String, dynamic>)['nonce'] as String;
+  }
+
+  Future<AuthResult> loginWithApple(
+    String identityToken,
+    String nonce,
+    String? name,
+  ) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/apple'),
+        headers: _jsonHeaders,
+        body: jsonEncode({
+          'identity_token': identityToken,
+          'nonce': nonce,
+          'name': name,
+        }),
+      ),
+    );
+    return AuthResult.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<AuthResult> loginWithGoogle(String identityToken) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/google'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'identity_token': identityToken}),
+      ),
+    );
+    return AuthResult.fromJson(json as Map<String, dynamic>);
+  }
+
   Future<AuthUser> me() async {
     final json = await _send(
       () => _client.get(_uri('/api/auth/me'), headers: _authHeaders),

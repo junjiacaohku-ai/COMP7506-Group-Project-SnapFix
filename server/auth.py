@@ -92,7 +92,7 @@ def authenticate(conn: sqlite3.Connection, email: str, password: str) -> dict:
     if len(password) > 128:
         raise AuthError("邮箱或密码不正确")
     row = conn.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
-    if row is None:
+    if row is None or row["password_hash"] is None:
         raise AuthError("邮箱或密码不正确")
     salt = base64.b64decode(row["password_salt"])
     candidate = _hash_password(password, salt)

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 import auth
 import db
+import oauth
 import pipeline
 import providers
 import retrieval
@@ -77,6 +78,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleAuthRequest(BaseModel):
+    identity_token: str
+
+
+class AppleAuthRequest(BaseModel):
+    identity_token: str
+    nonce: str
+    name: str | None = None
+
+
 class NameRequest(BaseModel):
     name: str
 
@@ -120,6 +131,39 @@ def login(req: LoginRequest):
     try:
         with db.connect() as conn:
             user = auth.authenticate(conn, req.email, req.password)
+            token = auth.issue_token(conn, user["id"])
+    except auth.AuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    return {"token": token, "user": user}
+
+
+@app.post("/api/auth/google")
+def google_oauth(req: GoogleAuthRequest):
+    try:
+        with db.connect() as conn:
+            user = oauth.google_login(conn, req.identity_token)
+            token = auth.issue_token(conn, user["id"])
+    except oauth.OAuthUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except auth.AuthError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    return {"token": token, "user": user}
+
+
+@app.post("/api/auth/apple/nonce")
+def apple_nonce():
+    with db.connect() as conn:
+        nonce = oauth.create_apple_nonce(conn)
+    return {"nonce": nonce}
+
+
+@app.post("/api/auth/apple")
+def apple_oauth(req: AppleAuthRequest):
+    try:
+        with db.connect() as conn:
+            user = oauth.apple_login(
+                conn, req.identity_token, req.nonce, req.name
+            )
             token = auth.issue_token(conn, user["id"])
     except auth.AuthError as e:
         raise HTTPException(status_code=401, detail=str(e))

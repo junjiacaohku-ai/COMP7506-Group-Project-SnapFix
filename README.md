@@ -29,10 +29,29 @@ cd app && flutter run   # iOS 模拟器直接访问 127.0.0.1:8001;Android 模�
 
 ## 真实账号与个人档案
 
-首次打开需注册或登录。注册使用邮箱 + 密码,邮箱仅作为账号标识,当前不发送
-验证邮件,也不提供未接入的社交登录或找回密码入口。密码使用 PBKDF2 加盐哈希;
-访问令牌保存在设备 Keychain / Android Keystore,服务器只保存令牌哈希。
+首次打开需注册或登录。支持邮箱 + 密码、Sign in with Apple;Google 登录在配置
+OAuth Client ID 后启用。不提供未接入的验证码或找回密码入口。密码使用 PBKDF2
+加盐哈希;访问令牌保存在设备 Keychain / Android Keystore,服务器只保存令牌哈希。
 诊断、步骤反馈、删除与报修接口均按当前用户隔离。
+
+Apple 使用原生授权、一次性 nonce 与服务端 JWKS/JWT 校验。Apple / Google 身份通过
+`auth_identities` 关联账号;已验证邮箱相同则复用现有用户,不创建重复账号。
+Apple 需要有效的 Apple Developer Program 配置,并已为 App ID 启用 Sign in with Apple。
+
+### Google OAuth 配置
+
+1. 在 Google Cloud 配置 OAuth 同意屏幕,创建 **iOS** 类型的 OAuth Client ID,
+   bundle id 使用 `hk.snapfix.snapfixSolo`。
+2. 在 `server/.env` 设置 `GOOGLE_CLIENT_ID`。
+3. 在 `app/ios/Flutter/Auth.xcconfig` 填入 `GOOGLE_CLIENT_ID` 与
+   `GOOGLE_REVERSED_CLIENT_ID`。
+4. 启动 App 时传入同一个 Client ID:
+
+```bash
+flutter run --dart-define=GOOGLE_CLIENT_ID=你的-iOS-Client-ID
+```
+
+未配置 Client ID 时 Google 按钮隐藏,后端 OAuth 接口返回 503,不会伪造登录结果。
 
 ## 演示场景对照(mock 模式)
 

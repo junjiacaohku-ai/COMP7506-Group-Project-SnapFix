@@ -13,7 +13,7 @@ class AuthUser {
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
     id: json['id'] as String,
     name: json['name'] as String,
-    email: json['email'] as String,
+    email: json['email'] as String?,
     createdAt:
         DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
         DateTime.now(),
@@ -21,7 +21,7 @@ class AuthUser {
 
   final String id;
   final String name;
-  final String email;
+  final String? email;
   final DateTime createdAt;
 
   String get initials {

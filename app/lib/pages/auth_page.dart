@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../api.dart';
 import '../auth.dart';
+import '../social_auth.dart';
 import '../theme.dart';
 import '../ui.dart';
 
@@ -57,6 +62,31 @@ class _AuthPageState extends State<AuthPage> {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
       if (mounted) setState(() => _error = '暂时无法完成操作，请稍后重试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _socialLogin(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action();
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } on SignInWithAppleAuthorizationException catch (error) {
+      if (error.code != AuthorizationErrorCode.canceled && mounted) {
+        setState(() => _error = 'Apple 登录未完成，请稍后重试');
+      }
+    } on GoogleSignInException catch (error) {
+      if (error.code != GoogleSignInExceptionCode.canceled && mounted) {
+        setState(() => _error = error.description ?? 'Google 登录未完成，请重试');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = '暂时无法完成第三方登录，请稍后重试');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -265,6 +295,41 @@ class _AuthPageState extends State<AuthPage> {
                   busy: _busy,
                   onPressed: _submit,
                 ),
+                const SizedBox(height: 20),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        '或使用以下方式登录',
+                        style: TextStyle(color: AppColors.muted, fontSize: 11),
+                      ),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (Platform.isIOS || Platform.isMacOS) ...[
+                  SignInWithAppleButton(
+                    onPressed: _busy
+                        ? null
+                        : () => _socialLogin(widget.auth.loginWithApple),
+                    text: '使用 Apple 登录',
+                    height: 52,
+                    style: SignInWithAppleButtonStyle.white,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (SocialAuthService.googleConfigured)
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _socialLogin(widget.auth.loginWithGoogle),
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 30),
+                    label: const Text('使用 Google 登录'),
+                  ),
                 const SizedBox(height: 20),
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.center,

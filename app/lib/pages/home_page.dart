@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../ui.dart';
 import 'error_code_page.dart';
 import 'scan_page.dart';
 
@@ -42,59 +43,303 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openScan() {
+    Navigator.of(context).push(AppPageRoute(child: ScanPage(api: widget.api)));
+  }
+
+  void _openErrorCode() {
+    Navigator.of(context)
+        .push(AppPageRoute(child: ErrorCodePage(api: widget.api)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: AppBackground(
+        child: SafeArea(
+          child: ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
             children: [
               Row(
                 children: [
-                  const Text(
-                    'SnapFix 随手修',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
+                  const BrandMark(size: 40),
+                  const SizedBox(width: 11),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SnapFix',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '随手修',
+                          style: TextStyle(
+                            color: AppColors.secondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  if (_health?.mock ?? false) const _DemoBadge(),
+                  if (_health?.mock ?? false)
+                    const AppPill(label: '演示模式', icon: Icons.bolt_rounded),
                 ],
               ),
-              const SizedBox(height: 6),
+              if (_offline) ...[
+                const SizedBox(height: 16),
+                _OfflineBanner(onRetry: _checkHealth),
+              ],
+              const SizedBox(height: 34),
               const Text(
-                '先搞懂,再决定',
-                style: TextStyle(color: AppColors.secondary, fontSize: 15),
-              ),
-              const SizedBox(height: 12),
-              if (_offline) _OfflineBanner(onRetry: _checkHealth),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ScanPage(api: widget.api)),
+                '先搞懂，再决定。',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
-                icon: const Icon(Icons.photo_camera_outlined, size: 24),
-                label: const Text('拍照诊断'),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '拍张照片，\n把故障看明白。',
+                style: TextStyle(
+                  color: AppColors.text,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  height: 1.18,
+                  letterSpacing: -1.2,
+                ),
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ErrorCodePage(api: widget.api),
+              const Text(
+                '识别设备与错误码，结合官方手册，\n给你安全、可执行的维修建议。',
+                style: TextStyle(
+                  color: AppColors.secondary,
+                  fontSize: 14,
+                  height: 1.65,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _ScanHero(online: !_offline, onTap: _openScan),
+              const SizedBox(height: 14),
+              Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  onTap: _openErrorCode,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: const Icon(
+                            Icons.tag_rounded,
+                            color: AppColors.accent,
+                            size: 23,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '有错误码？直接查',
+                                style: TextStyle(
+                                  color: AppColors.text,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                '跳过拍照，检索官方手册',
+                                style: TextStyle(
+                                  color: AppColors.secondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: AppColors.muted,
+                          size: 15,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                icon: const Icon(Icons.tag, size: 22),
-                label: const Text('错误码速查'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+              const Row(
+                children: [
+                  Expanded(
+                    child: _TrustItem(
+                      icon: Icons.menu_book_outlined,
+                      label: '手册溯源',
+                    ),
+                  ),
+                  Expanded(
+                    child: _TrustItem(
+                      icon: Icons.shield_outlined,
+                      label: '安全评估',
+                    ),
+                  ),
+                  Expanded(
+                    child: _TrustItem(
+                      icon: Icons.lock_outline_rounded,
+                      label: '隐私优先',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanHero extends StatelessWidget {
+  const _ScanHero({required this.online, required this.onTap});
+
+  final bool online;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Ink(
+          height: 282,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF211C38), Color(0xFF111D27)],
+            ),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.25),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                blurRadius: 40,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              const Positioned(
+                top: 18,
+                left: 18,
+                child: AppPill(
+                  label: 'AI 视觉诊断',
+                  icon: Icons.auto_awesome_rounded,
+                ),
+              ),
+              Positioned(
+                top: 24,
+                right: 20,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: online ? AppColors.green : AppColors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      online ? '已就绪' : '离线',
+                      style: const TextStyle(
+                        color: AppColors.secondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Center(
-                child: Text(
-                  '拍张照片或输入错误码,获取分步维修指引',
-                  style: TextStyle(color: AppColors.secondary, fontSize: 13),
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 34),
+                  child: ScanFrame(size: 154),
+                ),
+              ),
+              Positioned(
+                left: 20,
+                right: 16,
+                bottom: 18,
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '拍摄故障部位',
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            '拍照或从相册选择',
+                            style: TextStyle(
+                              color: AppColors.secondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_outward_rounded,
+                        color: AppColors.background,
+                        size: 21,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -105,26 +350,28 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _DemoBadge extends StatelessWidget {
-  const _DemoBadge();
+class _TrustItem extends StatelessWidget {
+  const _TrustItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0x26F5A623),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.amber),
-      ),
-      child: const Text(
-        '演示数据',
-        style: TextStyle(
-          color: AppColors.amber,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: AppColors.muted, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.secondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -137,20 +384,20 @@ class _OfflineBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x33F5A623),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.amber),
+        color: AppColors.red.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.red.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off_outlined, color: AppColors.amber),
+          const Icon(Icons.cloud_off_outlined, color: AppColors.red, size: 20),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              '未连接后端',
-              style: TextStyle(color: AppColors.amber, fontSize: 15),
+              '诊断服务未连接',
+              style: TextStyle(color: AppColors.text, fontSize: 13),
             ),
           ),
           TextButton(onPressed: onRetry, child: const Text('重试')),

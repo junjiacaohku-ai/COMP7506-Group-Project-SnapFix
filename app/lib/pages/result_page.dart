@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../api.dart';
 import '../models.dart';
 import '../theme.dart';
+import '../ui.dart';
 import '../util/toast.dart';
 
 class ResultPage extends StatefulWidget {
@@ -41,10 +42,20 @@ class _ResultPageState extends State<ResultPage> {
     } on ApiException catch (e) {
       if (mounted) showAppToast(context, e.message);
     } catch (_) {
-      if (mounted) showAppToast(context, '网络异常,请稍后重试');
+      if (mounted) showAppToast(context, '网络异常，请稍后重试');
     } finally {
       if (mounted) setState(() => _pendingStepId = null);
     }
+  }
+
+  void _showReport() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surface,
+      builder: (_) => ReportSheet(api: widget.api, sessionId: _session.id),
+    );
   }
 
   @override
@@ -52,49 +63,65 @@ class _ResultPageState extends State<ResultPage> {
     if (_session.safetyRefused) return _buildRefusedPage();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('诊断结果')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-        children: [
-          _DeviceCard(session: _session),
-          const SizedBox(height: 14),
-          _DecisionCard(session: _session),
-          const SizedBox(height: 20),
-          const Text(
-            '维修步骤',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+      appBar: AppBar(
+        title: const Text('诊断报告'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 20),
+            child: Center(
+              child: AppPill(label: 'AI + 官方手册', icon: Icons.verified_outlined),
             ),
           ),
-          const SizedBox(height: 10),
-          for (final step in _session.steps) ...[
-            _StepCard(
-              step: step,
-              busy: _pendingStepId != null,
-              onFeedback: (f) => _sendFeedback(step, f),
-            ),
-            const SizedBox(height: 12),
-          ],
-          const SizedBox(height: 8),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: FilledButton.icon(
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: AppColors.card,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      body: AppBackground(
+        glow: false,
+        child: ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            _DeviceCard(session: _session),
+            const SizedBox(height: 14),
+            _DecisionCard(session: _session),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '维修计划',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                AppPill(label: '${_session.steps.length} 个步骤'),
+              ],
             ),
-            builder: (_) =>
-                ReportSheet(api: widget.api, sessionId: _session.id),
-          ),
-          icon: const Icon(Icons.description_outlined, size: 22),
-          label: const Text('生成报修信息'),
+            const SizedBox(height: 7),
+            const Text(
+              '按顺序操作，可以随时标记完成进度',
+              style: TextStyle(color: AppColors.secondary, fontSize: 12),
+            ),
+            const SizedBox(height: 18),
+            for (var i = 0; i < _session.steps.length; i++)
+              _StepCard(
+                step: _session.steps[i],
+                isLast: i == _session.steps.length - 1,
+                busy: _pendingStepId != null,
+                onFeedback: (f) => _sendFeedback(_session.steps[i], f),
+              ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+        child: GradientButton(
+          onPressed: _showReport,
+          icon: Icons.description_outlined,
+          label: '生成双语报修信息',
         ),
       ),
     );
@@ -102,63 +129,90 @@ class _ResultPageState extends State<ResultPage> {
 
   Widget _buildRefusedPage() {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const Spacer(),
-              Container(
-                width: 96,
-                height: 96,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x26FF6B6B),
+      appBar: AppBar(title: const Text('安全评估')),
+      body: AppBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 22),
+            child: Column(
+              children: [
+                const Spacer(),
+                Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.red.withValues(alpha: 0.09),
+                    border: Border.all(
+                      color: AppColors.red.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.gpp_maybe_outlined,
+                    color: AppColors.red,
+                    size: 54,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.gpp_maybe_outlined,
+                const SizedBox(height: 24),
+                const AppPill(
+                  label: '安全保护已触发',
+                  icon: Icons.shield_outlined,
                   color: AppColors.red,
-                  size: 52,
                 ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                '安全提示',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0x66FF6B6B)),
-                ),
-                child: Text(
-                  _session.decisionReason,
-                  style: const TextStyle(
+                const SizedBox(height: 16),
+                const Text(
+                  '这项维修不适合\n自行操作',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
                     color: AppColors.text,
-                    fontSize: 16,
+                    fontSize: 29,
+                    fontWeight: FontWeight.w800,
+                    height: 1.25,
+                    letterSpacing: -0.7,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.red.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppColors.red.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Text(
+                    _session.decisionReason,
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 15,
+                      height: 1.7,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 12,
                     height: 1.6,
                   ),
                 ),
-              ),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.red,
-                  foregroundColor: AppColors.onAmber,
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.engineering_outlined, size: 22),
+                  label: const Text('返回并寻求专业帮助'),
                 ),
-                icon: const Icon(Icons.engineering_outlined, size: 22),
-                label: const Text('请咨询专业师傅'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -177,64 +231,107 @@ class _DeviceCard extends StatelessWidget {
       if (session.brand?.isNotEmpty ?? false) session.brand,
       if (session.model?.isNotEmpty ?? false) session.model,
     ].join(' ');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0x26F5A623),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                deviceCategoryIcon(session.deviceCategory),
-                color: AppColors.amber,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    deviceCategoryLabel(session.deviceCategory),
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return SurfaceCard(
+      radius: 26,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.2),
+                      AppColors.accent.withValues(alpha: 0.08),
+                    ],
                   ),
-                  if (brandModel.isNotEmpty) ...[
-                    const SizedBox(height: 3),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  deviceCategoryIcon(session.deviceCategory),
+                  color: AppColors.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '识别结果',
+                      style: TextStyle(
+                        color: AppColors.secondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
-                      brandModel,
+                      deviceCategoryLabel(session.deviceCategory),
                       style: const TextStyle(
                         color: AppColors.text,
-                        fontSize: 15,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 3),
-                  Text(
-                    [
-                      if (session.errorCode?.isNotEmpty ?? false)
-                        '错误码 ${session.errorCode}',
-                      formatDateTime(session.createdAt),
-                    ].join(' · '),
-                    style: const TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 13,
+                ),
+              ),
+              const AppPill(
+                label: '诊断完成',
+                icon: Icons.check_circle_outline_rounded,
+                color: AppColors.green,
+              ),
+            ],
+          ),
+          if (brandModel.isNotEmpty ||
+              session.errorCode?.isNotEmpty == true) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.background.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      brandModel.isEmpty ? '设备型号未识别' : brandModel,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
+                  if (session.errorCode?.isNotEmpty == true)
+                    Text(
+                      session.errorCode!,
+                      style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                 ],
               ),
             ),
           ],
-        ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatDateTime(session.createdAt),
+              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -250,40 +347,77 @@ class _DecisionCard extends StatelessWidget {
     final style = decisionStyle(session.decision);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: style.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: style.color.withValues(alpha: 0.6)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [style.color.withValues(alpha: 0.13), AppColors.surface],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: style.color.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(style.icon, color: style.color, size: 24),
-              const SizedBox(width: 8),
-              Text(
-                style.label,
-                style: TextStyle(
-                  color: style.color,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: style.color.withValues(alpha: 0.12),
                 ),
+                child: Icon(style.icon, color: style.color, size: 24),
+              ),
+              const SizedBox(width: 13),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '维修建议',
+                    style: TextStyle(color: AppColors.secondary, fontSize: 11),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    style.label,
+                    style: TextStyle(
+                      color: style.color,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           if (session.decisionReason.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Text(
               session.decisionReason,
               style: const TextStyle(
                 color: AppColors.text,
-                fontSize: 15,
-                height: 1.5,
+                fontSize: 14,
+                height: 1.65,
               ),
             ),
           ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(
+                Icons.verified_user_outlined,
+                color: style.color.withValues(alpha: 0.8),
+                size: 15,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                '已结合设备状态与安全规则',
+                style: TextStyle(color: AppColors.secondary, fontSize: 11),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -293,103 +427,147 @@ class _DecisionCard extends StatelessWidget {
 class _StepCard extends StatelessWidget {
   const _StepCard({
     required this.step,
+    required this.isLast,
     required this.busy,
     required this.onFeedback,
   });
 
   final RepairStep step;
+  final bool isLast;
   final bool busy;
   final ValueChanged<String> onFeedback;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0x26F5A623),
-                border: Border.all(color: AppColors.amber),
-              ),
-              child: Text(
-                '${step.idx}',
-                style: const TextStyle(
-                  color: AppColors.amber,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.content,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
+    final done = step.feedback == 'done';
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done
+                      ? AppColors.green
+                      : AppColors.primary.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: done ? AppColors.green : AppColors.primary,
                   ),
-                  if (step.citationManual.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    _CitationChip(
-                      manual: step.citationManual,
-                      section: step.citationSection,
+                ),
+                child: done
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: AppColors.background,
+                      )
+                    : Text(
+                        '${step.idx}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    margin: const EdgeInsets.symmetric(vertical: 7),
+                    color: done
+                        ? AppColors.green.withValues(alpha: 0.35)
+                        : AppColors.border,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding: const EdgeInsets.all(17),
+                decoration: BoxDecoration(
+                  color: done
+                      ? AppColors.green.withValues(alpha: 0.045)
+                      : AppColors.surface,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: done
+                        ? AppColors.green.withValues(alpha: 0.3)
+                        : AppColors.border,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      step.content,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 15,
+                        height: 1.65,
+                      ),
+                    ),
+                    if (step.citationManual.isNotEmpty) ...[
+                      const SizedBox(height: 13),
+                      _Citation(
+                        manual: step.citationManual,
+                        section: step.citationSection,
+                      ),
+                    ],
+                    const SizedBox(height: 15),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _FeedbackButton(
+                          icon: Icons.check_rounded,
+                          label: '完成',
+                          selected: step.feedback == 'done',
+                          selectedColor: AppColors.green,
+                          enabled: !busy,
+                          onTap: () => onFeedback('done'),
+                        ),
+                        const SizedBox(width: 7),
+                        _FeedbackButton(
+                          icon: Icons.arrow_forward_rounded,
+                          label: '跳过',
+                          selected: step.feedback == 'skipped',
+                          selectedColor: AppColors.secondary,
+                          enabled: !busy,
+                          onTap: () => onFeedback('skipped'),
+                        ),
+                        const SizedBox(width: 7),
+                        _FeedbackButton(
+                          icon: Icons.close_rounded,
+                          label: '没用',
+                          selected: step.feedback == 'not_useful',
+                          selectedColor: AppColors.red,
+                          enabled: !busy,
+                          onTap: () => onFeedback('not_useful'),
+                        ),
+                      ],
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
-              children: [
-                _FeedbackButton(
-                  icon: Icons.check,
-                  tooltip: '完成',
-                  selected: step.feedback == 'done',
-                  selectedColor: AppColors.green,
-                  enabled: !busy,
-                  onTap: () => onFeedback('done'),
-                ),
-                const SizedBox(height: 6),
-                _FeedbackButton(
-                  icon: Icons.close,
-                  tooltip: '没用',
-                  selected: step.feedback == 'not_useful',
-                  selectedColor: AppColors.red,
-                  enabled: !busy,
-                  onTap: () => onFeedback('not_useful'),
-                ),
-                const SizedBox(height: 6),
-                _FeedbackButton(
-                  icon: Icons.arrow_forward,
-                  tooltip: '跳过',
-                  selected: step.feedback == 'skipped',
-                  selectedColor: AppColors.secondary,
-                  enabled: !busy,
-                  onTap: () => onFeedback('skipped'),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CitationChip extends StatelessWidget {
-  const _CitationChip({required this.manual, required this.section});
+class _Citation extends StatelessWidget {
+  const _Citation({required this.manual, required this.section});
 
   final String manual;
   final String section;
@@ -397,24 +575,27 @@ class _CitationChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.amber),
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(
             Icons.menu_book_outlined,
-            size: 14,
-            color: AppColors.amber,
+            size: 15,
+            color: AppColors.primary,
           ),
-          const SizedBox(width: 5),
-          Flexible(
+          const SizedBox(width: 7),
+          Expanded(
             child: Text(
               '$manual${section.isEmpty ? '' : ' · $section'}',
-              style: const TextStyle(color: AppColors.amber, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 11,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -426,7 +607,7 @@ class _CitationChip extends StatelessWidget {
 class _FeedbackButton extends StatelessWidget {
   const _FeedbackButton({
     required this.icon,
-    required this.tooltip,
+    required this.label,
     required this.selected,
     required this.selectedColor,
     required this.enabled,
@@ -434,7 +615,7 @@ class _FeedbackButton extends StatelessWidget {
   });
 
   final IconData icon;
-  final String tooltip;
+  final String label;
   final bool selected;
   final Color selectedColor;
   final bool enabled;
@@ -442,28 +623,38 @@ class _FeedbackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: enabled ? onTap : null,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: selected ? selectedColor : AppColors.card,
-            border: Border.all(
-              color: selected ? selectedColor : AppColors.border,
-              width: 1.2,
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: selected
+              ? selectedColor.withValues(alpha: 0.13)
+              : AppColors.surfaceRaised,
+          border: Border.all(
+            color: selected ? selectedColor : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: selected ? selectedColor : AppColors.secondary,
             ),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: selected ? AppColors.onAmber : AppColors.secondary,
-          ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? selectedColor : AppColors.secondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -483,39 +674,81 @@ class ReportSheet extends StatelessWidget {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
+        height: MediaQuery.of(context).size.height * 0.66,
         child: DefaultTabController(
           length: 2,
           child: Column(
             children: [
               const SizedBox(height: 10),
               Container(
-                width: 40,
+                width: 38,
                 height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                '报修信息',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 12, 14),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '报修信息',
+                            style: TextStyle(
+                              color: AppColors.text,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(height: 3),
+                          Text(
+                            '一键复制给房东或维修师傅',
+                            style: TextStyle(
+                              color: AppColors.secondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      color: AppColors.secondary,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              const TabBar(
-                labelColor: AppColors.amber,
-                unselectedLabelColor: AppColors.secondary,
-                indicatorColor: AppColors.amber,
-                dividerColor: AppColors.border,
-                tabs: [
-                  Tab(text: '中文'),
-                  Tab(text: 'English'),
-                ],
+              Container(
+                height: 46,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: TabBar(
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: AppColors.secondary,
+                  labelStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  indicator: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  tabs: const [
+                    Tab(text: '中文'),
+                    Tab(text: 'English'),
+                  ],
+                ),
               ),
               Expanded(
                 child: TabBarView(
@@ -573,7 +806,7 @@ class _ReportPaneState extends State<_ReportPane>
       setState(() => _content = content);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = '生成失败,请重试');
+      setState(() => _error = '生成失败，请重试');
     }
   }
 
@@ -620,9 +853,9 @@ class _ReportPaneState extends State<_ReportPane>
     if (content == null) {
       return const Center(
         child: SizedBox(
-          width: 32,
-          height: 32,
-          child: CircularProgressIndicator(strokeWidth: 3),
+          width: 30,
+          height: 30,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
         ),
       );
     }
@@ -633,10 +866,10 @@ class _ReportPaneState extends State<_ReportPane>
           Expanded(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
                 color: AppColors.background,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.border),
               ),
               child: SingleChildScrollView(
@@ -644,8 +877,8 @@ class _ReportPaneState extends State<_ReportPane>
                   content,
                   style: const TextStyle(
                     color: AppColors.text,
-                    fontSize: 16,
-                    height: 1.6,
+                    fontSize: 14,
+                    height: 1.7,
                   ),
                 ),
               ),
@@ -658,9 +891,9 @@ class _ReportPaneState extends State<_ReportPane>
                 child: FilledButton.icon(
                   onPressed: _copy,
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(50),
                   ),
-                  icon: const Icon(Icons.copy_outlined, size: 20),
+                  icon: const Icon(Icons.copy_outlined, size: 19),
                   label: const Text('复制'),
                 ),
               ),
@@ -669,11 +902,13 @@ class _ReportPaneState extends State<_ReportPane>
                 child: OutlinedButton.icon(
                   onPressed: _share,
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    foregroundColor: AppColors.amber,
-                    side: const BorderSide(color: AppColors.amber),
+                    minimumSize: const Size.fromHeight(50),
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(
+                      color: AppColors.primary.withValues(alpha: 0.45),
+                    ),
                   ),
-                  icon: const Icon(Icons.share_outlined, size: 20),
+                  icon: const Icon(Icons.share_outlined, size: 19),
                   label: const Text('分享'),
                 ),
               ),

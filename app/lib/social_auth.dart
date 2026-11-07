@@ -8,6 +8,9 @@ class SocialAuthService {
   SocialAuthService({required this.api});
 
   static const _googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  static const _googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+  );
 
   final ApiClient api;
   bool _googleInitialized = false;
@@ -43,7 +46,12 @@ class SocialAuthService {
       throw const ApiException('Google 登录尚未配置 Client ID');
     }
     if (!_googleInitialized) {
-      await GoogleSignIn.instance.initialize(clientId: _googleClientId);
+      await GoogleSignIn.instance.initialize(
+        clientId: _googleClientId,
+        serverClientId: _googleServerClientId.isEmpty
+            ? null
+            : _googleServerClientId,
+      );
       _googleInitialized = true;
     }
     final account = await GoogleSignIn.instance.authenticate();

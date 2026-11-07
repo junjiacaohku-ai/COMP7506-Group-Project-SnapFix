@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
@@ -30,7 +31,9 @@ class _ScanPageState extends State<ScanPage> {
       final photo = await _picker.pickImage(source: source, maxWidth: 1600);
       if (photo != null) setState(() => _photo = photo);
     } catch (_) {
-      if (mounted) showAppToast(context, '无法打开相机或相册，请检查权限');
+      if (mounted) {
+        showAppToast(context, context.tr('无法打开相机或相册，请检查权限'));
+      }
     } finally {
       if (mounted) setState(() => _picking = false);
     }
@@ -48,14 +51,14 @@ class _ScanPageState extends State<ScanPage> {
       ),
     );
     if (error != null && mounted) {
-      showAppToast(context, error);
+      showAppToast(context, context.tr(error));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('新建诊断')),
+      appBar: AppBar(title: Text(context.tr('新建诊断'))),
       body: AppBackground(
         glow: _photo == null,
         child: SafeArea(
@@ -73,14 +76,17 @@ class _ScanPageState extends State<ScanPage> {
       physics: const BouncingScrollPhysics(),
       children: [
         const SizedBox(height: 10),
-        const Align(
+        Align(
           alignment: Alignment.centerLeft,
-          child: AppPill(label: '拍摄故障照片', icon: Icons.photo_camera_outlined),
+          child: AppPill(
+            label: context.tr('拍摄故障照片'),
+            icon: Icons.photo_camera_outlined,
+          ),
         ),
         const SizedBox(height: 18),
-        const Text(
-          '对准故障，拍清楚',
-          style: TextStyle(
+        Text(
+          context.tr('对准故障，拍清楚'),
+          style: const TextStyle(
             color: AppColors.text,
             fontSize: 29,
             fontWeight: FontWeight.w800,
@@ -88,9 +94,9 @@ class _ScanPageState extends State<ScanPage> {
           ),
         ),
         const SizedBox(height: 9),
-        const Text(
-          '对准设备铭牌、错误码或故障部位，\n清晰的照片能让诊断更准确。',
-          style: TextStyle(
+        Text(
+          context.tr('对准设备铭牌、错误码或故障部位，\n清晰的照片能让诊断更准确。'),
+          style: const TextStyle(
             color: AppColors.secondary,
             fontSize: 14,
             height: 1.6,
@@ -104,17 +110,17 @@ class _ScanPageState extends State<ScanPage> {
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: AppColors.border),
           ),
-          child: const Stack(
+          child: Stack(
             children: [
-              Center(child: ScanFrame(size: 172)),
+              const Center(child: ScanFrame(size: 172)),
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 24,
                 child: Text(
-                  '一个镜头，读懂设备状态',
+                  context.tr('一个镜头，读懂设备状态'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.secondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -126,7 +132,7 @@ class _ScanPageState extends State<ScanPage> {
         ),
         const SizedBox(height: 22),
         GradientButton(
-          label: '拍摄照片',
+          label: context.tr('拍摄照片'),
           icon: Icons.photo_camera_outlined,
           busy: _picking,
           onPressed: () => _pick(ImageSource.camera),
@@ -135,7 +141,7 @@ class _ScanPageState extends State<ScanPage> {
         OutlinedButton.icon(
           onPressed: _picking ? null : () => _pick(ImageSource.gallery),
           icon: const Icon(Icons.photo_library_outlined, size: 21),
-          label: const Text('从相册选择'),
+          label: Text(context.tr('从相册选择')),
         ),
         const SizedBox(height: 24),
         const Row(
@@ -182,17 +188,17 @@ class _ScanPageState extends State<ScanPage> {
                     ),
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   top: 18,
                   left: 18,
                   child: AppPill(
-                    label: '照片已就绪',
+                    label: context.tr('照片已就绪'),
                     icon: Icons.check_circle_outline_rounded,
                     color: AppColors.green,
-                    backgroundColor: Color(0xCC12151D),
+                    backgroundColor: const Color(0xCC12151D),
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   left: 20,
                   right: 20,
                   bottom: 20,
@@ -200,17 +206,17 @@ class _ScanPageState extends State<ScanPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '这张照片看起来不错',
-                        style: TextStyle(
+                        context.tr('这张照片看起来不错'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      SizedBox(height: 5),
+                      const SizedBox(height: 5),
                       Text(
-                        'AI 将识别设备、错误码与可见故障',
-                        style: TextStyle(
+                        context.tr('AI 将识别设备、错误码与可见故障'),
+                        style: const TextStyle(
                           color: Color(0xFFD4D7E0),
                           fontSize: 13,
                         ),
@@ -224,7 +230,7 @@ class _ScanPageState extends State<ScanPage> {
         ),
         const SizedBox(height: 18),
         GradientButton(
-          label: '开始智能诊断',
+          label: context.tr('开始智能诊断'),
           icon: Icons.auto_awesome_rounded,
           onPressed: _startDiagnosis,
         ),
@@ -232,7 +238,7 @@ class _ScanPageState extends State<ScanPage> {
         TextButton.icon(
           onPressed: () => setState(() => _photo = null),
           icon: const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('重新选择'),
+          label: Text(context.tr('重新选择')),
         ),
       ],
     );
@@ -252,7 +258,7 @@ class _CaptureTip extends StatelessWidget {
         Icon(icon, color: AppColors.muted, size: 19),
         const SizedBox(height: 7),
         Text(
-          label,
+          context.tr(label),
           style: const TextStyle(color: AppColors.secondary, fontSize: 11),
         ),
       ],

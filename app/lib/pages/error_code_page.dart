@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
@@ -40,14 +41,14 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
       ),
     );
     if (error != null && mounted) {
-      showAppToast(context, error);
+      showAppToast(context, context.tr(error));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('错误码速查')),
+      appBar: AppBar(title: Text(context.tr('错误码速查'))),
       body: AppBackground(
         child: SafeArea(
           child: GestureDetector(
@@ -59,18 +60,18 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 children: [
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: AppPill(
-                      label: '官方手册检索',
+                      label: context.tr('官方手册检索'),
                       icon: Icons.menu_book_outlined,
                       color: AppColors.accent,
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    '错误码，直接查。',
-                    style: TextStyle(
+                  Text(
+                    context.tr('错误码，直接查。'),
+                    style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 29,
                       fontWeight: FontWeight.w800,
@@ -78,9 +79,9 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     ),
                   ),
                   const SizedBox(height: 9),
-                  const Text(
-                    '输入设备品牌和显示屏上的代码，\n无需拍照也能找到对应维修指引。',
-                    style: TextStyle(
+                  Text(
+                    context.tr('输入设备品牌和显示屏上的代码，\n无需拍照也能找到对应维修指引。'),
+                    style: const TextStyle(
                       color: AppColors.secondary,
                       fontSize: 14,
                       height: 1.6,
@@ -91,13 +92,14 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     controller: _brandController,
                     textInputAction: TextInputAction.next,
                     style: const TextStyle(color: AppColors.text, fontSize: 16),
-                    decoration: const InputDecoration(
-                      labelText: '设备品牌',
-                      hintText: '例如 Bosch',
-                      prefixIcon: Icon(Icons.factory_outlined),
+                    decoration: InputDecoration(
+                      labelText: context.tr('设备品牌'),
+                      hintText: context.tr('例如 Bosch'),
+                      prefixIcon: const Icon(Icons.factory_outlined),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? '请输入设备品牌' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? context.tr('请输入设备品牌')
+                        : null,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -110,35 +112,36 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: '错误码',
-                      hintText: '例如 E24',
-                      prefixIcon: Icon(Icons.tag_rounded),
+                    decoration: InputDecoration(
+                      labelText: context.tr('错误码'),
+                      hintText: context.tr('例如 E24'),
+                      prefixIcon: const Icon(Icons.tag_rounded),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? '请输入错误码' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? context.tr('请输入错误码')
+                        : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 24),
                   GradientButton(
-                    label: '查询维修指引',
+                    label: context.tr('查询维修指引'),
                     icon: Icons.manage_search_rounded,
                     onPressed: _submit,
                   ),
                   const SizedBox(height: 22),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.verified_outlined,
                         color: AppColors.muted,
                         size: 16,
                       ),
-                      SizedBox(width: 7),
+                      const SizedBox(width: 7),
                       Flexible(
                         child: Text(
-                          '结果附手册来源，方便核对与报修',
-                          style: TextStyle(
+                          context.tr('结果附手册来源，方便核对与报修'),
+                          style: const TextStyle(
                             color: AppColors.secondary,
                             fontSize: 12,
                           ),

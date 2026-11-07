@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../auth.dart';
+import '../l10n.dart';
 import '../models.dart';
+import '../settings.dart';
 import '../theme.dart';
 import '../ui.dart';
+import '../util/toast.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.api, required this.auth});
@@ -55,27 +58,47 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showPrivacy() {
-    showDialog<void>(
+  void _showPrivacy() => showPrivacyDialog(context);
+
+  void _selectLanguage() {
+    showModalBottomSheet<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
-          Icons.privacy_tip_outlined,
-          color: AppColors.primary,
-          size: 32,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  sheetContext.tr('选择应用语言'),
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            for (final language in AppLanguage.values)
+              ListTile(
+                title: Text(language.label),
+                trailing: AppSettingsScope.of(sheetContext).language == language
+                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                    : null,
+                onTap: () async {
+                  final saved = await AppSettingsScope.of(sheetContext)
+                      .setLanguage(language);
+                  if (!sheetContext.mounted) return;
+                  Navigator.of(sheetContext).pop();
+                  if (!saved && mounted) {
+                    showAppToast(context, context.tr('语言偏好保存失败'));
+                  }
+                },
+              ),
+          ],
         ),
-        title: const Text('隐私与数据'),
-        content: const Text(
-          '• 照片仅用于当次诊断处理，不在服务器保存原图。\n\n'
-          '• 诊断报告和步骤进度保存在你的个人账号下。\n\n'
-          '• 登录令牌保存在设备安全存储中，服务器只保存令牌哈希。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('知道了'),
-          ),
-        ],
       ),
     );
   }
@@ -84,16 +107,19 @@ class ProfilePageState extends State<ProfilePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('退出当前账号？'),
-        content: const Text('诊断记录仍会保留在账号中，下次登录可以继续查看。'),
+        title: Text(context.tr('退出当前账号？')),
+        content: Text(context.tr('诊断记录仍会保留在账号中，下次登录可以继续查看。')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(context.tr('取消')),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('退出登录', style: TextStyle(color: AppColors.red)),
+            child: Text(
+              context.tr('退出登录'),
+              style: const TextStyle(color: AppColors.red),
+            ),
           ),
         ],
       ),
@@ -120,9 +146,9 @@ class ProfilePageState extends State<ProfilePage> {
               ),
               padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
               children: [
-                const Text(
-                  '我的',
-                  style: TextStyle(
+                Text(
+                  context.tr('我的'),
+                  style: const TextStyle(
                     color: AppColors.text,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
@@ -167,7 +193,7 @@ class ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              user.email ?? '第三方账号登录',
+                              user.email ?? context.tr('第三方账号登录'),
                               style: const TextStyle(
                                 color: AppColors.secondary,
                                 fontSize: 12,
@@ -175,7 +201,10 @@ class ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              '加入于 ${user.createdAt.year} 年 ${user.createdAt.month} 月',
+                              context.tr('加入于 {year} 年 {month} 月', {
+                                'year': user.createdAt.year,
+                                'month': user.createdAt.month,
+                              }),
                               style: const TextStyle(
                                 color: AppColors.muted,
                                 fontSize: 11,
@@ -186,7 +215,7 @@ class ProfilePageState extends State<ProfilePage> {
                       ),
                       IconButton(
                         onPressed: _editName,
-                        tooltip: '编辑昵称',
+                        tooltip: context.tr('编辑昵称'),
                         icon: const Icon(
                           Icons.edit_outlined,
                           color: AppColors.primary,
@@ -215,10 +244,10 @@ class ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       const SizedBox(width: 13),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          '个人诊断档案',
-                          style: TextStyle(
+                          context.tr('个人诊断档案'),
+                          style: const TextStyle(
                             color: AppColors.text,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -226,7 +255,9 @@ class ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       Text(
-                        _sessionCount == null ? '—' : '$_sessionCount 条',
+                        _sessionCount == null
+                            ? '—'
+                            : context.tr('{count} 条', {'count': _sessionCount}),
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 17,
@@ -241,7 +272,7 @@ class ProfilePageState extends State<ProfilePage> {
                   TextButton.icon(
                     onPressed: reload,
                     icon: const Icon(Icons.refresh_rounded, size: 17),
-                    label: Text(_error!),
+                    label: Text(context.tr(_error!)),
                   ),
                 ],
                 const SizedBox(height: 28),
@@ -255,6 +286,13 @@ class ProfilePageState extends State<ProfilePage> {
                         title: '编辑昵称',
                         subtitle: user.name,
                         onTap: _editName,
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.language_rounded,
+                        title: '语言',
+                        subtitle: AppSettingsScope.of(context).language.label,
+                        onTap: _selectLanguage,
                       ),
                       const Divider(height: 1, indent: 60),
                       _SettingsTile(
@@ -292,7 +330,7 @@ class ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 22),
                 const _SectionLabel('关于'),
-                const SurfaceCard(
+                SurfaceCard(
                   padding: EdgeInsets.zero,
                   child: _SettingsTile(
                     icon: Icons.info_outline_rounded,
@@ -310,7 +348,7 @@ class ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   icon: const Icon(Icons.logout_rounded, size: 20),
-                  label: const Text('退出登录'),
+                  label: Text(context.tr('退出登录')),
                 ),
               ],
             ),
@@ -331,7 +369,7 @@ class _SectionLabel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 9),
       child: Text(
-        label,
+        context.tr(label),
         style: const TextStyle(
           color: AppColors.secondary,
           fontSize: 12,
@@ -373,7 +411,7 @@ class _SettingsTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    context.tr(title),
                     style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 14,
@@ -382,7 +420,7 @@ class _SettingsTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    context.tr(subtitle),
                     style: const TextStyle(
                       color: AppColors.secondary,
                       fontSize: 11,
@@ -456,7 +494,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('编辑昵称'),
+      title: Text(context.tr('编辑昵称')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -465,9 +503,12 @@ class _EditNameDialogState extends State<_EditNameDialog> {
             autofocus: true,
             maxLength: 30,
             style: const TextStyle(color: AppColors.text),
-            decoration: const InputDecoration(
-              labelText: '你的称呼',
-              counterStyle: TextStyle(color: AppColors.muted, fontSize: 11),
+            decoration: InputDecoration(
+              labelText: context.tr('你的称呼'),
+              counterStyle: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 11,
+              ),
             ),
             onSubmitted: (_) => _save(),
           ),
@@ -475,7 +516,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                _error!,
+                context.tr(_error!),
                 style: const TextStyle(color: AppColors.red, fontSize: 12),
               ),
             ),
@@ -484,7 +525,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(context.tr('取消')),
         ),
         FilledButton(
           onPressed: _busy ? null : _save,
@@ -495,7 +536,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('保存'),
+              : Text(context.tr('保存')),
         ),
       ],
     );

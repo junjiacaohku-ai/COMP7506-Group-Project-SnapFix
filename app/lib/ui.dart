@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'l10n.dart';
 import 'theme.dart';
 
 class AppBackground extends StatelessWidget {
@@ -113,7 +114,7 @@ class AppPill extends StatelessWidget {
             const SizedBox(width: 5),
           ],
           Text(
-            label,
+            context.tr(label),
             style: TextStyle(
               color: color,
               fontSize: 11,
@@ -214,7 +215,7 @@ class GradientButton extends StatelessWidget {
                           const SizedBox(width: 9),
                         ],
                         Text(
-                          label,
+                          context.tr(label),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -230,6 +231,32 @@ class GradientButton extends StatelessWidget {
       ),
     );
   }
+}
+
+void showPrivacyDialog(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      icon: const Icon(
+        Icons.privacy_tip_outlined,
+        color: AppColors.primary,
+        size: 32,
+      ),
+      title: Text(dialogContext.tr('隐私与数据')),
+      content: Text(
+        '${dialogContext.tr('• 你主动提交的照片仅用于诊断处理，服务器不保存原图。')}\n\n'
+        '${dialogContext.tr('• 在线诊断模式下，照片会发送至所配置的模型服务进行分析。')}\n\n'
+        '${dialogContext.tr('• 诊断报告和步骤进度保存在你的个人账号下。')}\n\n'
+        '${dialogContext.tr('• 密码经加盐哈希保存。登录令牌保存在设备安全存储中，服务器只保存令牌哈希。')}',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(dialogContext.tr('知道了')),
+        ),
+      ],
+    ),
+  );
 }
 
 class ScanFrame extends StatelessWidget {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../ui.dart';
@@ -40,9 +41,9 @@ class _ResultPageState extends State<ResultPage> {
       if (!mounted) return;
       setState(() => _session = updated);
     } on ApiException catch (e) {
-      if (mounted) showAppToast(context, e.message);
+      if (mounted) showAppToast(context, context.tr(e.message));
     } catch (_) {
-      if (mounted) showAppToast(context, '网络异常，请稍后重试');
+      if (mounted) showAppToast(context, context.tr('网络异常，请稍后重试'));
     } finally {
       if (mounted) setState(() => _pendingStepId = null);
     }
@@ -64,12 +65,15 @@ class _ResultPageState extends State<ResultPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('诊断报告'),
-        actions: const [
+        title: Text(context.tr('诊断报告')),
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 20),
+            padding: const EdgeInsets.only(right: 20),
             child: Center(
-              child: AppPill(label: '手册溯源', icon: Icons.verified_outlined),
+              child: AppPill(
+                label: context.tr('手册溯源'),
+                icon: Icons.verified_outlined,
+              ),
             ),
           ),
         ],
@@ -86,10 +90,10 @@ class _ResultPageState extends State<ResultPage> {
             const SizedBox(height: 28),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '维修计划',
-                    style: TextStyle(
+                    context.tr('维修计划'),
+                    style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
@@ -97,13 +101,17 @@ class _ResultPageState extends State<ResultPage> {
                     ),
                   ),
                 ),
-                AppPill(label: '${_session.steps.length} 个步骤'),
+                AppPill(
+                  label: context.tr('{count} 个步骤', {
+                    'count': _session.steps.length,
+                  }),
+                ),
               ],
             ),
             const SizedBox(height: 7),
-            const Text(
-              '按顺序操作，可以随时标记完成进度',
-              style: TextStyle(color: AppColors.secondary, fontSize: 12),
+            Text(
+              context.tr('按顺序操作，可以随时标记完成进度'),
+              style: const TextStyle(color: AppColors.secondary, fontSize: 12),
             ),
             const SizedBox(height: 18),
             for (var i = 0; i < _session.steps.length; i++)
@@ -121,7 +129,7 @@ class _ResultPageState extends State<ResultPage> {
         child: GradientButton(
           onPressed: _showReport,
           icon: Icons.description_outlined,
-          label: '生成双语报修信息',
+          label: context.tr('生成双语报修信息'),
         ),
       ),
     );
@@ -129,7 +137,7 @@ class _ResultPageState extends State<ResultPage> {
 
   Widget _buildRefusedPage() {
     return Scaffold(
-      appBar: AppBar(title: const Text('安全评估')),
+      appBar: AppBar(title: Text(context.tr('安全评估'))),
       body: AppBackground(
         child: SafeArea(
           child: Padding(
@@ -154,16 +162,16 @@ class _ResultPageState extends State<ResultPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const AppPill(
-                  label: '安全保护已触发',
+                AppPill(
+                  label: context.tr('安全保护已触发'),
                   icon: Icons.shield_outlined,
                   color: AppColors.red,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '这项维修不适合\n自行操作',
+                Text(
+                  context.tr('这项维修不适合\n自行操作'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.text,
                     fontSize: 29,
                     fontWeight: FontWeight.w800,
@@ -192,10 +200,10 @@ class _ResultPageState extends State<ResultPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。',
+                Text(
+                  context.tr('为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.secondary,
                     fontSize: 12,
                     height: 1.6,
@@ -209,7 +217,7 @@ class _ResultPageState extends State<ResultPage> {
                     foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.engineering_outlined, size: 22),
-                  label: const Text('返回并寻求专业帮助'),
+                  label: Text(context.tr('返回并寻求专业帮助')),
                 ),
               ],
             ),
@@ -260,9 +268,9 @@ class _DeviceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '识别结果',
-                      style: TextStyle(
+                    Text(
+                      context.tr('识别结果'),
+                      style: const TextStyle(
                         color: AppColors.secondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -270,7 +278,7 @@ class _DeviceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      deviceCategoryLabel(session.deviceCategory),
+                      context.tr(deviceCategoryLabel(session.deviceCategory)),
                       style: const TextStyle(
                         color: AppColors.text,
                         fontSize: 20,
@@ -280,8 +288,8 @@ class _DeviceCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const AppPill(
-                label: '诊断完成',
+              AppPill(
+                label: context.tr('诊断完成'),
                 icon: Icons.check_circle_outline_rounded,
                 color: AppColors.green,
               ),
@@ -301,7 +309,7 @@ class _DeviceCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      brandModel.isEmpty ? '设备型号未识别' : brandModel,
+                      brandModel.isEmpty ? context.tr('设备型号未识别') : brandModel,
                       style: const TextStyle(
                         color: AppColors.text,
                         fontSize: 14,
@@ -375,13 +383,16 @@ class _DecisionCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '维修建议',
-                    style: TextStyle(color: AppColors.secondary, fontSize: 11),
+                  Text(
+                    context.tr('维修建议'),
+                    style: const TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    style.label,
+                    context.tr(style.label),
                     style: TextStyle(
                       color: style.color,
                       fontSize: 22,
@@ -412,9 +423,14 @@ class _DecisionCard extends StatelessWidget {
                 size: 15,
               ),
               const SizedBox(width: 6),
-              const Text(
-                '已结合设备状态与安全规则',
-                style: TextStyle(color: AppColors.secondary, fontSize: 11),
+              Flexible(
+                child: Text(
+                  context.tr('已结合设备状态与安全规则'),
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 11,
+                  ),
+                ),
               ),
             ],
           ),
@@ -647,7 +663,7 @@ class _FeedbackButton extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(
                 color: selected ? selectedColor : AppColors.secondary,
                 fontSize: 10,
@@ -692,22 +708,22 @@ class ReportSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 12, 12, 14),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '报修信息',
-                            style: TextStyle(
+                            context.tr('报修信息'),
+                            style: const TextStyle(
                               color: AppColors.text,
                               fontSize: 21,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          SizedBox(height: 3),
+                          const SizedBox(height: 3),
                           Text(
-                            '一键复制给房东或维修师傅',
-                            style: TextStyle(
+                            context.tr('一键复制给房东或维修师傅'),
+                            style: const TextStyle(
                               color: AppColors.secondary,
                               fontSize: 12,
                             ),
@@ -813,7 +829,7 @@ class _ReportPaneState extends State<_ReportPane>
   Future<void> _copy() async {
     final content = _content;
     if (content == null) return;
-    showAppToast(context, '已复制到剪贴板');
+    showAppToast(context, context.tr('已复制到剪贴板'));
     await Clipboard.setData(ClipboardData(text: content));
   }
 
@@ -840,11 +856,11 @@ class _ReportPaneState extends State<_ReportPane>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _error!,
+              context.tr(_error!),
               style: const TextStyle(color: AppColors.secondary, fontSize: 15),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: _load, child: const Text('重试')),
+            TextButton(onPressed: _load, child: Text(context.tr('重试'))),
           ],
         ),
       );
@@ -894,7 +910,7 @@ class _ReportPaneState extends State<_ReportPane>
                     minimumSize: const Size.fromHeight(50),
                   ),
                   icon: const Icon(Icons.copy_outlined, size: 19),
-                  label: const Text('复制'),
+                  label: Text(context.tr('复制')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -909,7 +925,7 @@ class _ReportPaneState extends State<_ReportPane>
                     ),
                   ),
                   icon: const Icon(Icons.share_outlined, size: 19),
-                  label: const Text('分享'),
+                  label: Text(context.tr('分享')),
                 ),
               ),
             ],

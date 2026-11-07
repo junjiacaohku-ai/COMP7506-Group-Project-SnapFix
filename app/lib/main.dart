@@ -1,34 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api.dart';
 import 'auth.dart';
+import 'l10n.dart';
 import 'pages/archive_page.dart';
 import 'pages/auth_page.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
+import 'settings.dart';
 import 'theme.dart';
 import 'ui.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final api = ApiClient();
   final auth = AuthController(api: api);
-  runApp(SnapFixApp(api: api, auth: auth));
+  final settings = AppSettings();
+  await settings.load();
+  runApp(SnapFixApp(api: api, auth: auth, settings: settings));
 }
 
 class SnapFixApp extends StatelessWidget {
-  const SnapFixApp({super.key, required this.api, required this.auth});
+  const SnapFixApp({
+    super.key,
+    required this.api,
+    required this.auth,
+    required this.settings,
+  });
 
   final ApiClient api;
   final AuthController auth;
+  final AppSettings settings;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SnapFix 随手修',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      home: AuthGate(api: api, auth: auth),
+    return AppSettingsScope(
+      settings: settings,
+      child: AnimatedBuilder(
+        animation: settings,
+        builder: (_, _) => MaterialApp(
+          title: 'SnapFix',
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(),
+          locale: settings.locale,
+          supportedLocales: const [Locale('en'), Locale('zh')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: AuthGate(api: api, auth: auth),
+        ),
+      ),
     );
   }
 }
@@ -73,24 +93,24 @@ class _RestoringView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: AppBackground(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              BrandMark(size: 58),
-              SizedBox(height: 22),
+              const BrandMark(size: 58),
+              const SizedBox(height: 22),
               Text(
-                'SnapFix 随手修',
-                style: TextStyle(
+                context.tr('SnapFix 随手修'),
+                style: const TextStyle(
                   color: AppColors.text,
                   fontSize: 21,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 20),
-              SizedBox(
+              const SizedBox(height: 20),
+              const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2.2),
@@ -124,9 +144,9 @@ class _RestoreErrorView extends StatelessWidget {
                   size: 48,
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  '暂时无法恢复账号',
-                  style: TextStyle(
+                Text(
+                  context.tr('暂时无法恢复账号'),
+                  style: const TextStyle(
                     color: AppColors.text,
                     fontSize: 23,
                     fontWeight: FontWeight.w700,
@@ -134,7 +154,7 @@ class _RestoreErrorView extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  auth.restoreError!,
+                  context.tr(auth.restoreError!),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: AppColors.secondary,
@@ -144,14 +164,14 @@ class _RestoreErrorView extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 GradientButton(
-                  label: '重新连接',
+                  label: context.tr('重新连接'),
                   icon: Icons.refresh_rounded,
                   onPressed: auth.restore,
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
                   onPressed: auth.logout,
-                  child: const Text('退出此设备上的账号'),
+                  child: Text(context.tr('退出此设备上的账号')),
                 ),
               ],
             ),
@@ -210,14 +230,14 @@ class _MainScaffoldState extends State<MainScaffold> {
               _NavItem(
                 icon: Icons.document_scanner_outlined,
                 selectedIcon: Icons.document_scanner_rounded,
-                label: '诊断',
+                label: context.tr('诊断'),
                 selected: _index == 0,
                 onTap: () => setState(() => _index = 0),
               ),
               _NavItem(
                 icon: Icons.inventory_2_outlined,
                 selectedIcon: Icons.inventory_2_rounded,
-                label: '档案',
+                label: context.tr('档案'),
                 selected: _index == 1,
                 onTap: () {
                   setState(() => _index = 1);
@@ -227,7 +247,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               _NavItem(
                 icon: Icons.person_outline_rounded,
                 selectedIcon: Icons.person_rounded,
-                label: '我的',
+                label: context.tr('我的'),
                 selected: _index == 2,
                 onTap: () {
                   setState(() => _index = 2);

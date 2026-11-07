@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../ui.dart';
@@ -60,21 +61,26 @@ class ArchivePageState extends State<ArchivePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('删除这条记录？'),
+        title: Text(context.tr('删除这条记录？')),
         content: Text(
-          '${deviceCategoryLabel(session.deviceCategory)}的诊断记录将被永久删除。',
+          context.tr('{category}的诊断记录将被永久删除。', {
+            'category': context.tr(deviceCategoryLabel(session.deviceCategory)),
+          }),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(
-              '取消',
-              style: TextStyle(color: AppColors.secondary),
+            child: Text(
+              context.tr('取消'),
+              style: const TextStyle(color: AppColors.secondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除', style: TextStyle(color: AppColors.red)),
+            child: Text(
+              context.tr('删除'),
+              style: const TextStyle(color: AppColors.red),
+            ),
           ),
         ],
       ),
@@ -84,7 +90,7 @@ class ArchivePageState extends State<ArchivePage> {
       await widget.api.deleteSession(session.id);
       return true;
     } catch (_) {
-      if (mounted) showAppToast(context, '删除失败，请稍后重试');
+      if (mounted) showAppToast(context, context.tr('删除失败，请稍后重试'));
       return false;
     }
   }
@@ -102,23 +108,23 @@ class ArchivePageState extends State<ArchivePage> {
                 padding: const EdgeInsets.fromLTRB(20, 22, 20, 4),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '诊断档案',
-                            style: TextStyle(
+                            context.tr('诊断档案'),
+                            style: const TextStyle(
                               color: AppColors.text,
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
                             ),
                           ),
-                          SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Text(
-                            '每一次维修，都有据可查',
-                            style: TextStyle(
+                            context.tr('每一次维修，都有据可查'),
+                            style: const TextStyle(
                               color: AppColors.secondary,
                               fontSize: 13,
                             ),
@@ -127,7 +133,11 @@ class ArchivePageState extends State<ArchivePage> {
                       ),
                     ),
                     if (sessions != null && sessions.isNotEmpty)
-                      AppPill(label: '${sessions.length} 条记录'),
+                      AppPill(
+                        label: context.tr('{count} 条记录', {
+                          'count': sessions.length,
+                        }),
+                      ),
                   ],
                 ),
               ),
@@ -146,7 +156,7 @@ class ArchivePageState extends State<ArchivePage> {
         icon: Icons.cloud_off_outlined,
         title: '暂时无法加载',
         text: _error!,
-        action: TextButton(onPressed: reload, child: const Text('重新连接')),
+        action: TextButton(onPressed: reload, child: Text(context.tr('重新连接'))),
       );
     }
     if (sessions == null) {
@@ -268,7 +278,9 @@ class _SessionTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          deviceCategoryLabel(session.deviceCategory),
+                          context.tr(
+                            deviceCategoryLabel(session.deviceCategory),
+                          ),
                           style: const TextStyle(
                             color: AppColors.text,
                             fontSize: 16,
@@ -310,7 +322,7 @@ class _SessionTile extends StatelessWidget {
                     ),
                   ),
                   AppPill(
-                    label: decision.label,
+                    label: context.tr(decision.label),
                     icon: decision.icon,
                     color: decision.color,
                   ),
@@ -359,7 +371,7 @@ class _CenteredHint extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              title,
+              context.tr(title),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.text,
@@ -369,7 +381,7 @@ class _CenteredHint extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              text,
+              context.tr(text),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.secondary,

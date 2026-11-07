@@ -34,6 +34,9 @@ OAuth Client ID 后启用。不提供未接入的验证码或找回密码入口�
 加盐哈希;访问令牌保存在设备 Keychain / Android Keystore,服务器只保存令牌哈希。
 诊断、步骤反馈、删除与报修接口均按当前用户隔离。
 
+界面默认使用 English,可在登录页右上角或个人中心的“语言”切换为简体中文。
+语言选择保存在设备上,重启后保留。界面文案随语言切换,手册引用与诊断原文保留来源语言。
+
 Apple 使用原生授权、一次性 nonce 与服务端 JWKS/JWT 校验。Apple / Google 身份通过
 `auth_identities` 关联账号;已验证邮箱相同则复用现有用户,不创建重复账号。
 Apple 需要有效的 Apple Developer Program 配置,并已为 App ID 启用 Sign in with Apple。
@@ -42,16 +45,23 @@ Apple 需要有效的 Apple Developer Program 配置,并已为 App ID 启用 Sig
 
 1. 在 Google Cloud 配置 OAuth 同意屏幕,创建 **iOS** 类型的 OAuth Client ID,
    bundle id 使用 `hk.snapfix.snapfixSolo`。
-2. 在 `server/.env` 设置 `GOOGLE_CLIENT_ID`。
-3. 在 `app/ios/Flutter/Auth.xcconfig` 填入 `GOOGLE_CLIENT_ID` 与
-   `GOOGLE_REVERSED_CLIENT_ID`。
-4. 启动 App 时传入同一个 Client ID:
+2. 推荐另建 **Web application** 类型的 OAuth Client ID,供后端验证 ID Token。
+   开发环境也可只使用 iOS Client ID,此时将 `GOOGLE_SERVER_CLIENT_ID` 留空。
+3. 在 `server/.env` 设置 `GOOGLE_CLIENT_ID` 为 iOS Client ID,
+   `GOOGLE_SERVER_CLIENT_ID` 为 Web application Client ID。后端优先使用后者,
+   未设置时回退到 iOS Client ID。
+4. 在 `app/ios/Flutter/Auth.xcconfig` 填入 iOS Client ID、对应的 reversed Client ID,
+   以及 Web application Client ID。
+5. 启动 App 时传入同一组配置:
 
 ```bash
-flutter run --dart-define=GOOGLE_CLIENT_ID=你的-iOS-Client-ID
+flutter run \
+  --dart-define=GOOGLE_CLIENT_ID=你的-iOS-Client-ID \
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=你的-Web-Client-ID
 ```
 
-未配置 Client ID 时 Google 按钮隐藏,后端 OAuth 接口返回 503,不会伪造登录结果。
+未配置 iOS Client ID 时 Google 按钮隐藏;后端没有可用的 Client ID 时,
+OAuth 接口返回 503,不会伪造登录结果。
 
 ## 演示场景对照(mock 模式)
 

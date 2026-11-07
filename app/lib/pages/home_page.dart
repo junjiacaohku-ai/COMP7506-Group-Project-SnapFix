@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../ui.dart';
@@ -59,11 +60,11 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   const BrandMark(size: 40),
                   const SizedBox(width: 11),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'SnapFix',
                           style: TextStyle(
                             color: AppColors.text,
@@ -73,8 +74,8 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Text(
-                          '随手修',
-                          style: TextStyle(
+                          context.tr('随手修'),
+                          style: const TextStyle(
                             color: AppColors.secondary,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -112,7 +113,7 @@ class _HomePageState extends State<HomePage> {
               ],
               const SizedBox(height: 34),
               Text(
-                '你好，${widget.user.name}',
+                context.tr('你好，{name}', {'name': widget.user.name}),
                 style: const TextStyle(
                   color: AppColors.primary,
                   fontSize: 14,
@@ -121,9 +122,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                '今天想修什么？',
-                style: TextStyle(
+              Text(
+                context.tr('今天想修什么？'),
+                style: const TextStyle(
                   color: AppColors.text,
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
@@ -132,9 +133,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                '拍照识别设备与错误码，\n获取带手册来源的维修建议。',
-                style: TextStyle(
+              Text(
+                context.tr('拍照识别设备与错误码，\n获取带手册来源的维修建议。'),
+                style: const TextStyle(
                   color: AppColors.secondary,
                   fontSize: 14,
                   height: 1.65,
@@ -171,22 +172,22 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '有错误码？直接查',
-                                style: TextStyle(
+                                context.tr('有错误码？直接查'),
+                                style: const TextStyle(
                                   color: AppColors.text,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                '跳过拍照，检索官方手册',
-                                style: TextStyle(
+                                context.tr('跳过拍照，检索官方手册'),
+                                style: const TextStyle(
                                   color: AppColors.secondary,
                                   fontSize: 12,
                                 ),
@@ -205,7 +206,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 24),
-              const Row(
+              Row(
                 children: [
                   Expanded(
                     child: _TrustItem(
@@ -270,11 +271,11 @@ class _ScanHero extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              const Positioned(
+              Positioned(
                 top: 18,
                 left: 18,
                 child: AppPill(
-                  label: '拍照诊断',
+                  label: context.tr('拍照诊断'),
                   icon: Icons.photo_camera_outlined,
                 ),
               ),
@@ -293,7 +294,7 @@ class _ScanHero extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      online ? '已就绪' : '离线',
+                      context.tr(online ? '已就绪' : '离线'),
                       style: const TextStyle(
                         color: AppColors.secondary,
                         fontSize: 11,
@@ -315,22 +316,22 @@ class _ScanHero extends StatelessWidget {
                 bottom: 18,
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '拍摄故障部位',
-                            style: TextStyle(
+                            context.tr('拍摄故障部位'),
+                            style: const TextStyle(
                               color: AppColors.text,
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          SizedBox(height: 3),
+                          const SizedBox(height: 3),
                           Text(
-                            '拍照或从相册选择',
-                            style: TextStyle(
+                            context.tr('拍照或从相册选择'),
+                            style: const TextStyle(
                               color: AppColors.secondary,
                               fontSize: 12,
                             ),
@@ -375,12 +376,14 @@ class _TrustItem extends StatelessWidget {
       children: [
         Icon(icon, color: AppColors.muted, size: 16),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.secondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            context.tr(label),
+            style: const TextStyle(
+              color: AppColors.secondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -406,13 +409,13 @@ class _OfflineBanner extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off_outlined, color: AppColors.red, size: 20),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              '诊断服务未连接',
-              style: TextStyle(color: AppColors.text, fontSize: 13),
+              context.tr('诊断服务未连接'),
+              style: const TextStyle(color: AppColors.text, fontSize: 13),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('重试')),
+          TextButton(onPressed: onRetry, child: Text(context.tr('重试'))),
         ],
       ),
     );

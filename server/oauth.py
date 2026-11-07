@@ -117,7 +117,10 @@ def _find_or_create_user(
 
 
 def google_login(conn: sqlite3.Connection, identity_token: str) -> dict:
-    client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    client_id = (
+        os.environ.get("GOOGLE_SERVER_CLIENT_ID", "").strip()
+        or os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+    )
     if not client_id:
         raise OAuthUnavailable("Google 登录尚未配置 Client ID")
     try:

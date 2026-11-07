@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../ui.dart';
@@ -77,8 +78,8 @@ class _AnalyzingPageState extends State<AnalyzingPage>
           color: AppColors.primary,
           size: 38,
         ),
-        title: const Text('照片还不够清晰'),
-        content: Text(detail, textAlign: TextAlign.center),
+        title: Text(context.tr('照片还不够清晰')),
+        content: Text(context.tr(detail), textAlign: TextAlign.center),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           FilledButton(
@@ -87,7 +88,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
               Navigator.of(context).pop();
             },
             style: FilledButton.styleFrom(minimumSize: const Size(150, 50)),
-            child: const Text('重新选择照片'),
+            child: Text(context.tr('重新选择照片')),
           ),
         ],
       ),
@@ -123,9 +124,9 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                   const Spacer(),
                   _buildOrb(),
                   const SizedBox(height: 28),
-                  const Text(
-                    '正在生成诊断',
-                    style: TextStyle(
+                  Text(
+                    context.tr('正在生成诊断'),
+                    style: const TextStyle(
                       color: AppColors.text,
                       fontSize: 27,
                       fontWeight: FontWeight.w800,
@@ -133,19 +134,22 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                     ),
                   ),
                   const SizedBox(height: 11),
-                  const Text(
-                    '设备识别、手册检索与安全评估正在处理中',
+                  Text(
+                    context.tr('设备识别、手册检索与安全评估正在处理中'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.secondary,
                       fontSize: 13,
                       height: 1.55,
                     ),
                   ),
                   const SizedBox(height: 7),
-                  const Text(
-                    '耗时取决于照片与网络状况',
-                    style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  Text(
+                    context.tr('耗时取决于照片与网络状况'),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 11,
+                    ),
                   ),
                   const Spacer(),
                   const SurfaceCard(
@@ -288,7 +292,7 @@ class _ProcessRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label,
+                context.tr(label),
                 style: const TextStyle(
                   color: AppColors.text,
                   fontSize: 14,
@@ -297,7 +301,7 @@ class _ProcessRow extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                description,
+                context.tr(description),
                 style: const TextStyle(
                   color: AppColors.secondary,
                   fontSize: 11,

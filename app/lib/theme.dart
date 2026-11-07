@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'settings.dart';
+
 @immutable
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
@@ -163,10 +165,87 @@ extension AppThemeContext on BuildContext {
   AppPalette get colors => Theme.of(this).extension<AppPalette>()!;
 }
 
-ThemeData buildAppTheme(Brightness brightness) {
-  final palette = brightness == Brightness.dark
+ThemeData buildAppTheme(
+  Brightness brightness, {
+  AppAccent accent = AppAccent.purple,
+}) {
+  final base = brightness == Brightness.dark
       ? AppPalette.dark
       : AppPalette.light;
+  final dark = brightness == Brightness.dark;
+  final tint = switch (accent) {
+    AppAccent.purple => (
+      base.primary,
+      base.primaryDark,
+      base.accent,
+      base.primaryGradient.colors,
+    ),
+    AppAccent.teal =>
+      dark
+          ? (
+              const Color(0xFF67E8F9),
+              const Color(0xFF289FB3),
+              const Color(0xFF67E8F9),
+              const [Color(0xFF8AEAF5), Color(0xFF38AFC5)],
+            )
+          : (
+              const Color(0xFF007F91),
+              const Color(0xFF005C6A),
+              const Color(0xFF008CA2),
+              const [Color(0xFF249FB0), Color(0xFF007185)],
+            ),
+    AppAccent.blue =>
+      dark
+          ? (
+              const Color(0xFF8AB4FF),
+              const Color(0xFF5B82E0),
+              const Color(0xFF8AB4FF),
+              const [Color(0xFFA5C4FF), Color(0xFF648DEB)],
+            )
+          : (
+              const Color(0xFF3568D4),
+              const Color(0xFF254EAA),
+              const Color(0xFF3568D4),
+              const [Color(0xFF5D86DF), Color(0xFF315BBD)],
+            ),
+    AppAccent.amber =>
+      dark
+          ? (
+              const Color(0xFFF4C77A),
+              const Color(0xFFC28B36),
+              const Color(0xFFF4C77A),
+              const [Color(0xFFF5D491), Color(0xFFD19B42)],
+            )
+          : (
+              const Color(0xFF8A5A0B),
+              const Color(0xFF674205),
+              const Color(0xFF9A680D),
+              const [Color(0xFFD5A94F), Color(0xFFAD7718)],
+            ),
+  };
+  final palette = base.copyWith(
+    primary: tint.$1,
+    primaryDark: tint.$2,
+    accent: tint.$3,
+    onPrimary: accent == AppAccent.amber && dark
+        ? const Color(0xFF241A05)
+        : Colors.white,
+    primaryGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: tint.$4,
+    ),
+    heroGradient: accent == AppAccent.purple
+        ? base.heroGradient
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              tint.$1.withValues(alpha: dark ? 0.17 : 0.13),
+              tint.$3.withValues(alpha: dark ? 0.07 : 0.05),
+            ],
+          ),
+  );
   final colorScheme = ColorScheme(
     brightness: brightness,
     primary: palette.primary,

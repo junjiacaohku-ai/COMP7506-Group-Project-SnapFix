@@ -17,7 +17,8 @@ class SocialAuthService {
 
   static bool get googleConfigured => _googleClientId.isNotEmpty;
 
-  Future<AuthResult> signInWithApple() async {
+  Future<({String identityToken, String nonce, String? name})>
+  _appleCredential() async {
     final nonce = await api.appleNonce();
     final credential = await SignInWithApple.getAppleIDCredential(
       scopes: [
@@ -34,14 +35,14 @@ class SocialAuthService {
       credential.givenName,
       credential.familyName,
     ].whereType<String>().join(' ').trim();
-    return api.loginWithApple(
-      identityToken,
-      nonce,
-      fullName.isEmpty ? null : fullName,
+    return (
+      identityToken: identityToken,
+      nonce: nonce,
+      name: fullName.isEmpty ? null : fullName,
     );
   }
 
-  Future<AuthResult> signInWithGoogle() async {
+  Future<String> _googleIdentityToken() async {
     if (!googleConfigured) {
       throw const ApiException('Google 登录尚未配置 Client ID');
     }
@@ -59,6 +60,32 @@ class SocialAuthService {
     if (identityToken == null || identityToken.isEmpty) {
       throw const ApiException('Google 未返回有效的身份令牌');
     }
-    return api.loginWithGoogle(identityToken);
+    return identityToken;
+  }
+
+  Future<AuthResult> signInWithApple() async {
+    final credential = await _appleCredential();
+    return api.loginWithApple(
+      credential.identityToken,
+      credential.nonce,
+      credential.name,
+    );
+  }
+
+  Future<AuthResult> signInWithGoogle() async {
+    return api.loginWithGoogle(await _googleIdentityToken());
+  }
+
+  Future<AuthUser> linkApple() async {
+    final credential = await _appleCredential();
+    return api.linkApple(
+      credential.identityToken,
+      credential.nonce,
+      credential.name,
+    );
+  }
+
+  Future<AuthUser> linkGoogle() async {
+    return api.linkGoogle(await _googleIdentityToken());
   }
 }

@@ -56,6 +56,7 @@ def _find_or_create_user(
     subject: str,
     email: str | None,
     name: str | None,
+    link_user_id: str | None = None,
 ) -> dict:
     if not subject:
         raise auth.AuthError("第三方账号缺少用户标识")
@@ -65,6 +66,30 @@ def _find_or_create_user(
         (provider, subject),
     ).fetchone()
     if row is not None:
+        if link_user_id is not None and row["id"] != link_user_id:
+            raise auth.AuthError("此第三方账号已绑定其他 SnapFix 账户")
+        return auth.public_user(row)
+
+    if link_user_id is not None:
+        row = conn.execute(
+            "SELECT * FROM users WHERE id=?", (link_user_id,)
+        ).fetchone()
+        if row is None:
+            raise auth.AuthError("当前账户不存在")
+        try:
+            conn.execute(
+                "INSERT INTO auth_identities "
+                "(id,user_id,provider,provider_user_id,created_at) VALUES (?,?,?,?,?)",
+                (
+                    str(uuid.uuid4()),
+                    link_user_id,
+                    provider,
+                    subject,
+                    auth._now().isoformat(),
+                ),
+            )
+        except sqlite3.IntegrityError:
+            raise auth.AuthError("当前账户已绑定此类型的登录方式")
         return auth.public_user(row)
 
     normalized_email = auth.normalize_email(email) if email else None
@@ -116,7 +141,9 @@ def _find_or_create_user(
     return auth.public_user(row)
 
 
-def google_login(conn: sqlite3.Connection, identity_token: str) -> dict:
+def google_login(
+    conn: sqlite3.Connection, identity_token: str, link_user_id: str | None = None
+) -> dict:
     client_id = (
         os.environ.get("GOOGLE_SERVER_CLIENT_ID", "").strip()
         or os.environ.get("GOOGLE_CLIENT_ID", "").strip()
@@ -139,6 +166,7 @@ def google_login(conn: sqlite3.Connection, identity_token: str) -> dict:
         claims["sub"],
         email,
         claims.get("name"),
+        link_user_id,
     )
 
 
@@ -174,6 +202,7 @@ def apple_login(
     identity_token: str,
     nonce: str,
     name: str | None,
+    link_user_id: str | None = None,
 ) -> dict:
     _consume_apple_nonce(conn, nonce)
     try:
@@ -198,4 +227,5 @@ def apple_login(
         claims["sub"],
         claims.get("email"),
         name,
+        link_user_id,
     )

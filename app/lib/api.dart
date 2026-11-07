@@ -28,6 +28,9 @@ class ApiClient {
   final String baseUrl;
   String? _accessToken;
   void Function()? onUnauthorized;
+  void Function(Session session)? onDiagnosisCompleted;
+
+  bool get hasAccessToken => _accessToken != null;
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
@@ -134,6 +137,114 @@ class ApiClient {
     );
   }
 
+  Future<List<LoginIdentity>> listIdentities() async {
+    final json = await _send(
+      () => _client.get(_uri('/api/auth/identities'), headers: _authHeaders),
+    );
+    return [
+      for (final item in (json as Map<String, dynamic>)['identities'] as List)
+        LoginIdentity.fromJson(item as Map<String, dynamic>),
+    ];
+  }
+
+  Future<AuthUser> linkApple(
+    String identityToken,
+    String nonce,
+    String? name,
+  ) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/apple/link'),
+        headers: _jsonHeaders,
+        body: jsonEncode({
+          'identity_token': identityToken,
+          'nonce': nonce,
+          'name': name,
+        }),
+      ),
+    );
+    return AuthUser.fromJson(
+      (json as Map<String, dynamic>)['user'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<AuthUser> linkGoogle(String identityToken) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/google/link'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'identity_token': identityToken}),
+      ),
+    );
+    return AuthUser.fromJson(
+      (json as Map<String, dynamic>)['user'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> unlinkIdentity(String provider) async {
+    await _send(
+      () => _client.delete(
+        _uri('/api/auth/identities/$provider'),
+        headers: _authHeaders,
+      ),
+    );
+  }
+
+  Future<int> changePassword(
+    String? currentPassword,
+    String newPassword,
+  ) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/auth/password'),
+        headers: _jsonHeaders,
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      ),
+    );
+    return (json as Map<String, dynamic>)['revoked_devices'] as int? ?? 0;
+  }
+
+  Future<void> deleteAccount() async {
+    await _send(
+      () => _client.delete(
+        _uri('/api/auth/me'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'confirmation': 'DELETE'}),
+      ),
+    );
+  }
+
+  Future<Map<String, String>> getPreferences() async {
+    final json = await _send(
+      () => _client.get(_uri('/api/preferences'), headers: _authHeaders),
+    );
+    final values = (json as Map<String, dynamic>)['values'] as Map;
+    return values.map((key, value) => MapEntry('$key', '$value'));
+  }
+
+  Future<void> updatePreference(String key, String value) async {
+    await _send(
+      () => _client.put(
+        _uri('/api/preferences'),
+        headers: _jsonHeaders,
+        body: jsonEncode({
+          'values': {key: value},
+        }),
+      ),
+    );
+  }
+
+  Future<List<ManualInfo>> manuals() async {
+    final json = await _send(() => _client.get(_uri('/api/manuals')));
+    return [
+      for (final item in json as List)
+        ManualInfo.fromJson(item as Map<String, dynamic>),
+    ];
+  }
+
   Future<void> logout() async {
     await _send(
       () => _client.post(_uri('/api/auth/logout'), headers: _authHeaders),
@@ -149,7 +260,9 @@ class ApiClient {
         .timeout(const Duration(seconds: 90));
     final body = await streamed.stream.bytesToString();
     final json = _decode(streamed.statusCode, body);
-    return Session.fromJson(json as Map<String, dynamic>);
+    final session = Session.fromJson(json as Map<String, dynamic>);
+    onDiagnosisCompleted?.call(session);
+    return session;
   }
 
   Future<Session> diagnoseManual(String brand, String errorCode) async {
@@ -160,7 +273,9 @@ class ApiClient {
         body: jsonEncode({'brand': brand, 'error_code': errorCode}),
       ),
     );
-    return Session.fromJson(json as Map<String, dynamic>);
+    final session = Session.fromJson(json as Map<String, dynamic>);
+    onDiagnosisCompleted?.call(session);
+    return session;
   }
 
   Future<List<Session>> listSessions() async {

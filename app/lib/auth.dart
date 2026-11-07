@@ -27,6 +27,7 @@ class AuthController extends ChangeNotifier {
   final ApiClient api;
   final FlutterSecureStorage _storage;
   late final SocialAuthService social = SocialAuthService(api: api);
+  Future<void> Function()? onAuthenticated;
 
   AuthUser? _user;
   bool _restoring = true;
@@ -48,6 +49,7 @@ class AuthController extends ChangeNotifier {
       } else {
         api.setAccessToken(token);
         _user = await api.me();
+        unawaited(onAuthenticated?.call());
       }
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
@@ -88,11 +90,32 @@ class AuthController extends ChangeNotifier {
     _user = result.user;
     _restoreError = null;
     notifyListeners();
+    unawaited(onAuthenticated?.call());
+  }
+
+  Future<void> refreshUser() async {
+    _user = await api.me();
+    notifyListeners();
   }
 
   Future<void> updateName(String name) async {
     final updated = await api.updateName(name.trim());
     _user = updated;
+    notifyListeners();
+  }
+
+  Future<int> changePassword(
+    String? currentPassword,
+    String newPassword,
+  ) async {
+    final revoked = await api.changePassword(currentPassword, newPassword);
+    await refreshUser();
+    return revoked;
+  }
+
+  Future<void> deleteAccount() async {
+    await api.deleteAccount();
+    await _clearSession();
     notifyListeners();
   }
 

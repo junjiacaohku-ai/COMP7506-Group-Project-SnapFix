@@ -92,6 +92,19 @@ class NameRequest(BaseModel):
     name: str
 
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str | None = None
+    new_password: str
+
+
+class PreferencesRequest(BaseModel):
+    values: dict[str, str]
+
+
+class DeleteAccountRequest(BaseModel):
+    confirmation: str
+
+
 class ManualDiagnoseRequest(BaseModel):
     brand: str
     error_code: str
@@ -193,6 +206,94 @@ def logout(
     with db.connect() as conn:
         auth.revoke_token(conn, _bearer_token(authorization))
     return {"logged_out": True}
+
+
+@app.get("/api/auth/identities")
+def identities(user: dict = Depends(current_user)):
+    with db.connect() as conn:
+        return {"identities": auth.list_identities(conn, user["id"])}
+
+
+@app.post("/api/auth/google/link")
+def link_google(req: GoogleAuthRequest, user: dict = Depends(current_user)):
+    try:
+        with db.connect() as conn:
+            linked = oauth.google_login(conn, req.identity_token, user["id"])
+    except oauth.OAuthUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except auth.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"user": linked}
+
+
+@app.post("/api/auth/apple/link")
+def link_apple(req: AppleAuthRequest, user: dict = Depends(current_user)):
+    try:
+        with db.connect() as conn:
+            linked = oauth.apple_login(
+                conn, req.identity_token, req.nonce, req.name, user["id"]
+            )
+    except auth.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"user": linked}
+
+
+@app.delete("/api/auth/identities/{provider}")
+def unlink_identity(provider: str, user: dict = Depends(current_user)):
+    try:
+        with db.connect() as conn:
+            auth.unlink_identity(conn, user["id"], provider)
+    except auth.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"unlinked": True}
+
+
+@app.post("/api/auth/password")
+def change_password(
+    req: PasswordChangeRequest,
+    user: dict = Depends(current_user),
+    authorization: str = Header(default=""),
+):
+    try:
+        with db.connect() as conn:
+            auth.change_password(
+                conn, user["id"], req.current_password, req.new_password
+            )
+            revoked = auth.revoke_other_tokens(
+                conn, user["id"], _bearer_token(authorization)
+            )
+    except auth.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"changed": True, "revoked_devices": revoked}
+
+
+@app.delete("/api/auth/me")
+def delete_account(
+    req: DeleteAccountRequest, user: dict = Depends(current_user)
+):
+    if req.confirmation != "DELETE":
+        raise HTTPException(status_code=400, detail="请输入 DELETE 以确认删除账号")
+    with db.connect() as conn:
+        auth.delete_user(conn, user["id"])
+    return {"deleted": True}
+
+
+@app.get("/api/preferences")
+def preferences(user: dict = Depends(current_user)):
+    with db.connect() as conn:
+        return {"values": auth.get_preferences(conn, user["id"])}
+
+
+@app.put("/api/preferences")
+def update_preferences(
+    req: PreferencesRequest, user: dict = Depends(current_user)
+):
+    try:
+        with db.connect() as conn:
+            values = auth.update_preferences(conn, user["id"], req.values)
+    except auth.AuthError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"values": values}
 
 
 @app.post("/api/analyze/image")

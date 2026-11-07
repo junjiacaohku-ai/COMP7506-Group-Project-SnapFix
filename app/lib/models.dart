@@ -8,6 +8,7 @@ class AuthUser {
     required this.name,
     required this.email,
     required this.createdAt,
+    required this.hasPassword,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
@@ -17,12 +18,14 @@ class AuthUser {
     createdAt:
         DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
         DateTime.now(),
+    hasPassword: json['has_password'] as bool? ?? false,
   );
 
   final String id;
   final String name;
   final String? email;
   final DateTime createdAt;
+  final bool hasPassword;
 
   String get initials {
     final trimmed = name.trim();
@@ -40,6 +43,34 @@ class AuthResult {
 
   final String token;
   final AuthUser user;
+}
+
+class LoginIdentity {
+  const LoginIdentity({required this.provider, required this.createdAt});
+
+  factory LoginIdentity.fromJson(Map<String, dynamic> json) => LoginIdentity(
+    provider: json['provider'] as String,
+    createdAt:
+        DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
+        DateTime.now(),
+  );
+
+  final String provider;
+  final DateTime createdAt;
+}
+
+class ManualInfo {
+  const ManualInfo({required this.title, required this.category, this.brand});
+
+  factory ManualInfo.fromJson(Map<String, dynamic> json) => ManualInfo(
+    title: json['title'] as String,
+    category: json['category'] as String,
+    brand: json['brand'] as String?,
+  );
+
+  final String title;
+  final String category;
+  final String? brand;
 }
 
 class HealthInfo {

@@ -4,10 +4,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'l10n.dart';
+import 'notification_service.dart';
 import 'pages/archive_page.dart';
 import 'pages/auth_page.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
+import 'pages/toolbox_page.dart';
 import 'settings.dart';
 import 'theme.dart';
 import 'ui.dart';
@@ -17,8 +19,20 @@ Future<void> main() async {
   final api = ApiClient();
   final auth = AuthController(api: api);
   final settings = AppSettings();
+  final notifications = NotificationService();
+  settings.attachApi(api);
+  settings.onNotificationsChanged = notifications.setEnabled;
+  auth.onAuthenticated = settings.syncFromCloud;
+  api.onDiagnosisCompleted = notifications.showDiagnosisComplete;
   await settings.load();
-  runApp(SnapFixApp(api: api, auth: auth, settings: settings));
+  runApp(
+    SnapFixApp(
+      api: api,
+      auth: auth,
+      settings: settings,
+      notifications: notifications,
+    ),
+  );
 }
 
 class SnapFixApp extends StatelessWidget {
@@ -27,11 +41,13 @@ class SnapFixApp extends StatelessWidget {
     required this.api,
     required this.auth,
     required this.settings,
+    required this.notifications,
   });
 
   final ApiClient api;
   final AuthController auth;
   final AppSettings settings;
+  final NotificationService notifications;
 
   @override
   Widget build(BuildContext context) {
@@ -39,17 +55,31 @@ class SnapFixApp extends StatelessWidget {
       settings: settings,
       child: AnimatedBuilder(
         animation: settings,
-        builder: (_, _) => MaterialApp(
-          title: 'SnapFix',
-          debugShowCheckedModeBanner: false,
-          theme: buildAppTheme(Brightness.light),
-          darkTheme: buildAppTheme(Brightness.dark),
-          themeMode: settings.appearance.themeMode,
-          locale: settings.locale,
-          supportedLocales: const [Locale('en'), Locale('zh')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: AuthGate(api: api, auth: auth),
-        ),
+        builder: (_, _) {
+          notifications.languageCode = settings.locale.languageCode;
+          return MaterialApp(
+            title: 'SnapFix',
+            debugShowCheckedModeBanner: false,
+            theme: buildAppTheme(Brightness.light, accent: settings.accent),
+            darkTheme: buildAppTheme(Brightness.dark, accent: settings.accent),
+            themeMode: settings.appearance.themeMode,
+            locale: settings.locale,
+            supportedLocales: const [Locale('en'), Locale('zh')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            builder: (context, child) {
+              final query = MediaQuery.of(context);
+              return MediaQuery(
+                data: query.copyWith(
+                  textScaler: TextScaler.linear(
+                    query.textScaler.scale(1) * settings.textScale.factor,
+                  ),
+                ),
+                child: child!,
+              );
+            },
+            home: AuthGate(api: api, auth: auth),
+          );
+        },
       ),
     );
   }
@@ -195,14 +225,16 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
+  final _toolboxKey = GlobalKey<ToolboxPageState>();
   final _archiveKey = GlobalKey<ArchivePageState>();
   final _profileKey = GlobalKey<ProfilePageState>();
   int _index = 0;
 
   void _selectTab(int index) {
     setState(() => _index = index);
-    if (index == 1) _archiveKey.currentState?.reload();
-    if (index == 2) _profileKey.currentState?.reload();
+    if (index == 1) _toolboxKey.currentState?.reload();
+    if (index == 2) _archiveKey.currentState?.reload();
+    if (index == 3) _profileKey.currentState?.reload();
   }
 
   @override
@@ -214,19 +246,22 @@ class _MainScaffoldState extends State<MainScaffold> {
           HomePage(
             api: widget.api,
             user: widget.auth.user!,
-            onProfileTap: () => _selectTab(2),
+            onProfileTap: () => _selectTab(3),
+            onHistoryTap: () => _selectTab(2),
+            onToolsTap: () => _selectTab(1),
           ),
+          ToolboxPage(key: _toolboxKey, api: widget.api),
           ArchivePage(key: _archiveKey, api: widget.api),
           ProfilePage(
             key: _profileKey,
             api: widget.api,
             auth: widget.auth,
-            onHistoryTap: () => _selectTab(1),
+            onHistoryTap: () => _selectTab(2),
           ),
         ],
       ),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 10),
         child: Container(
           height: 68,
           padding: const EdgeInsets.all(6),
@@ -245,31 +280,32 @@ class _MainScaffoldState extends State<MainScaffold> {
           child: Row(
             children: [
               _NavItem(
-                icon: Icons.document_scanner_outlined,
-                selectedIcon: Icons.document_scanner_rounded,
-                label: context.tr('诊断'),
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home_rounded,
+                label: context.tr('首页'),
                 selected: _index == 0,
-                onTap: () => setState(() => _index = 0),
+                onTap: () => _selectTab(0),
+              ),
+              _NavItem(
+                icon: Icons.handyman_outlined,
+                selectedIcon: Icons.handyman_rounded,
+                label: context.tr('工具箱'),
+                selected: _index == 1,
+                onTap: () => _selectTab(1),
               ),
               _NavItem(
                 icon: Icons.inventory_2_outlined,
                 selectedIcon: Icons.inventory_2_rounded,
                 label: context.tr('档案'),
-                selected: _index == 1,
-                onTap: () {
-                  setState(() => _index = 1);
-                  _archiveKey.currentState?.reload();
-                },
+                selected: _index == 2,
+                onTap: () => _selectTab(2),
               ),
               _NavItem(
                 icon: Icons.person_outline_rounded,
                 selectedIcon: Icons.person_rounded,
                 label: context.tr('我的'),
-                selected: _index == 2,
-                onTap: () {
-                  setState(() => _index = 2);
-                  _profileKey.currentState?.reload();
-                },
+                selected: _index == 3,
+                onTap: () => _selectTab(3),
               ),
             ],
           ),
@@ -319,20 +355,24 @@ class _NavItem extends StatelessWidget {
               children: [
                 Icon(
                   selected ? selectedIcon : icon,
-                  size: 21,
+                  size: 20,
                   color: selected
                       ? context.colors.primary
                       : context.colors.secondary,
                 ),
-                const SizedBox(width: 7),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: selected
-                        ? context.colors.primary
-                        : context.colors.secondary,
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected
+                          ? context.colors.primary
+                          : context.colors.secondary,
+                      fontSize: 12,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

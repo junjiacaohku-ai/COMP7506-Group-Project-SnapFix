@@ -8,6 +8,7 @@ import '../settings.dart';
 import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
+import 'account_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -86,6 +87,37 @@ class ProfilePageState extends State<ProfilePage> {
       onSelected: settings.setAppearance,
       errorMessage: '外观偏好保存失败',
     );
+  }
+
+  void _selectAccent() {
+    final settings = AppSettingsScope.of(context);
+    _showPreferenceSheet<AppAccent>(
+      title: '选择主题色',
+      options: AppAccent.values,
+      current: settings.accent,
+      label: (value) => value.label,
+      onSelected: settings.setAccent,
+      errorMessage: '主题色保存失败',
+    );
+  }
+
+  void _selectTextScale() {
+    final settings = AppSettingsScope.of(context);
+    _showPreferenceSheet<AppTextScale>(
+      title: '选择字体大小',
+      options: AppTextScale.values,
+      current: settings.textScale,
+      label: (value) => value.label,
+      onSelected: settings.setTextScale,
+      errorMessage: '字体大小保存失败',
+    );
+  }
+
+  Future<void> _setNotifications(bool value) async {
+    final saved = await AppSettingsScope.of(context).setNotifications(value);
+    if (!saved && mounted) {
+      showAppToast(context, context.tr('通知未开启，请检查系统通知权限'));
+    }
   }
 
   void _showPreferenceSheet<T>({
@@ -277,13 +309,33 @@ class ProfilePageState extends State<ProfilePage> {
                 _SectionLabel('账号'),
                 SurfaceCard(
                   padding: EdgeInsets.zero,
-                  child: _SettingsTile(
-                    icon: Icons.inventory_2_outlined,
-                    title: '个人诊断档案',
-                    subtitle: _sessionCount == null
-                        ? '查看全部诊断与维修进度'
-                        : context.tr('{count} 条记录', {'count': _sessionCount}),
-                    onTap: widget.onHistoryTap,
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.shield_outlined,
+                        title: '账号与安全',
+                        subtitle: '登录方式、密码与账号操作',
+                        onTap: () => Navigator.of(context).push(
+                          AppPageRoute(
+                            child: AccountPage(
+                              api: widget.api,
+                              auth: widget.auth,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.inventory_2_outlined,
+                        title: '个人诊断档案',
+                        subtitle: _sessionCount == null
+                            ? '查看全部诊断与维修进度'
+                            : context.tr('{count} 条记录', {
+                                'count': _sessionCount,
+                              }),
+                        onTap: widget.onHistoryTap,
+                      ),
+                    ],
                   ),
                 ),
                 if (_error != null) ...[
@@ -308,6 +360,20 @@ class ProfilePageState extends State<ProfilePage> {
                       ),
                       const Divider(height: 1, indent: 60),
                       _SettingsTile(
+                        icon: Icons.palette_outlined,
+                        title: '主题色',
+                        subtitle: settings.accent.label,
+                        onTap: _selectAccent,
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.text_fields_rounded,
+                        title: '字体大小',
+                        subtitle: settings.textScale.label,
+                        onTap: _selectTextScale,
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
                         icon: Icons.language_rounded,
                         title: '语言',
                         subtitle: settings.language.label,
@@ -323,6 +389,16 @@ class ProfilePageState extends State<ProfilePage> {
                           onChanged: _setReduceMotion,
                         ),
                       ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.notifications_outlined,
+                        title: '诊断完成通知',
+                        subtitle: '诊断完成后显示本地提醒',
+                        trailing: Switch.adaptive(
+                          value: settings.notifications,
+                          onChanged: _setNotifications,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -330,11 +406,26 @@ class ProfilePageState extends State<ProfilePage> {
                 _SectionLabel('数据与隐私'),
                 SurfaceCard(
                   padding: EdgeInsets.zero,
-                  child: _SettingsTile(
-                    icon: Icons.privacy_tip_outlined,
-                    title: '隐私与数据',
-                    subtitle: '照片、诊断记录与登录令牌',
-                    onTap: () => showPrivacyDialog(context),
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.privacy_tip_outlined,
+                        title: '隐私与数据',
+                        subtitle: '照片、诊断记录与登录令牌',
+                        onTap: () => showPrivacyDialog(context),
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.cloud_sync_outlined,
+                        title: '跨设备设置同步',
+                        subtitle: '语言、外观与通知偏好随账号同步',
+                        trailing: Icon(
+                          Icons.check_circle_outline_rounded,
+                          color: colors.green,
+                          size: 20,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 22),

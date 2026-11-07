@@ -85,7 +85,7 @@ class BrandMark extends StatelessWidget {
       ),
       child: Icon(
         Icons.auto_awesome_rounded,
-        color: Colors.white,
+        color: context.colors.onPrimary,
         size: size * 0.52,
       ),
     );
@@ -163,7 +163,7 @@ class SurfaceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: borderColor ?? context.colors.border),
       ),
-      child: child,
+      child: Material(color: Colors.transparent, child: child),
     );
   }
 }
@@ -211,19 +211,19 @@ class GradientButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: Center(
               child: busy
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 22,
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.4,
-                        color: Colors.white,
+                        color: context.colors.onPrimary,
                       ),
                     )
                   : Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (icon != null) ...[
-                          Icon(icon, color: Colors.white, size: 21),
+                          Icon(icon, color: context.colors.onPrimary, size: 21),
                           const SizedBox(width: 9),
                         ],
                         Flexible(
@@ -231,8 +231,8 @@ class GradientButton extends StatelessWidget {
                             context.tr(label),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.colors.onPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.1,
@@ -319,7 +319,11 @@ class ScanFrame extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: Colors.white, size: size * 0.24),
+            child: Icon(
+              icon,
+              color: context.colors.onPrimary,
+              size: size * 0.24,
+            ),
           ),
           CustomPaint(
             size: Size.square(size),

@@ -36,7 +36,16 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
     token_hash TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL
+    expires_at TEXT NOT NULL,
+    device_name TEXT,
+    last_used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, key)
 );
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
@@ -103,6 +112,13 @@ def init() -> None:
                 "ALTER TABLE sessions ADD COLUMN user_id TEXT "
                 "REFERENCES users(id) ON DELETE CASCADE"
             )
+        token_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(auth_tokens)")
+        }
+        if "device_name" not in token_columns:
+            conn.execute("ALTER TABLE auth_tokens ADD COLUMN device_name TEXT")
+        if "last_used_at" not in token_columns:
+            conn.execute("ALTER TABLE auth_tokens ADD COLUMN last_used_at TEXT")
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_auth_tokens_user
                 ON auth_tokens(user_id);

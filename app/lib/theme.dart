@@ -1,72 +1,219 @@
 import 'package:flutter/material.dart';
 
-abstract final class AppColors {
-  static const background = Color(0xFF090B10);
-  static const surface = Color(0xFF12151D);
-  static const surfaceRaised = Color(0xFF191D28);
-  static const border = Color(0xFF272D3A);
-  static const primary = Color(0xFFA895FF);
-  static const primaryDark = Color(0xFF7968E8);
-  static const accent = Color(0xFF67E8F9);
-  static const text = Color(0xFFF6F7FB);
-  static const secondary = Color(0xFF9AA3B5);
-  static const muted = Color(0xFF697386);
-  static const green = Color(0xFF73DFB2);
-  static const red = Color(0xFFFF7D92);
-  static const amber = Color(0xFFF4C77A);
-  static const onPrimary = Colors.white;
-  static const primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFB8A5FF), Color(0xFF8170F0)],
+@immutable
+class AppPalette extends ThemeExtension<AppPalette> {
+  const AppPalette({
+    required this.background,
+    required this.surface,
+    required this.surfaceRaised,
+    required this.border,
+    required this.primary,
+    required this.primaryDark,
+    required this.accent,
+    required this.text,
+    required this.secondary,
+    required this.muted,
+    required this.green,
+    required this.red,
+    required this.amber,
+    required this.onPrimary,
+    required this.primaryGradient,
+    required this.heroGradient,
+  });
+
+  static const dark = AppPalette(
+    background: Color(0xFF090B10),
+    surface: Color(0xFF12151D),
+    surfaceRaised: Color(0xFF191D28),
+    border: Color(0xFF272D3A),
+    primary: Color(0xFFA895FF),
+    primaryDark: Color(0xFF7968E8),
+    accent: Color(0xFF67E8F9),
+    text: Color(0xFFF6F7FB),
+    secondary: Color(0xFF9AA3B5),
+    muted: Color(0xFF697386),
+    green: Color(0xFF73DFB2),
+    red: Color(0xFFFF7D92),
+    amber: Color(0xFFF4C77A),
+    onPrimary: Colors.white,
+    primaryGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFB8A5FF), Color(0xFF8170F0)],
+    ),
+    heroGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF211C38), Color(0xFF111D27)],
+    ),
   );
+
+  static const light = AppPalette(
+    background: Color(0xFFF5F6FA),
+    surface: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFEEEFF5),
+    border: Color(0xFFDDE1E9),
+    primary: Color(0xFF6E56CF),
+    primaryDark: Color(0xFF5844BC),
+    accent: Color(0xFF007F91),
+    text: Color(0xFF171923),
+    secondary: Color(0xFF525C6E),
+    muted: Color(0xFF707A8B),
+    green: Color(0xFF157A56),
+    red: Color(0xFFC73850),
+    amber: Color(0xFF8A5A0B),
+    onPrimary: Colors.white,
+    primaryGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFF806CE0), Color(0xFF624AC3)],
+    ),
+    heroGradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFEAE4FF), Color(0xFFE3F1F5)],
+    ),
+  );
+
+  final Color background;
+  final Color surface;
+  final Color surfaceRaised;
+  final Color border;
+  final Color primary;
+  final Color primaryDark;
+  final Color accent;
+  final Color text;
+  final Color secondary;
+  final Color muted;
+  final Color green;
+  final Color red;
+  final Color amber;
+  final Color onPrimary;
+  final LinearGradient primaryGradient;
+  final LinearGradient heroGradient;
+
+  @override
+  AppPalette copyWith({
+    Color? background,
+    Color? surface,
+    Color? surfaceRaised,
+    Color? border,
+    Color? primary,
+    Color? primaryDark,
+    Color? accent,
+    Color? text,
+    Color? secondary,
+    Color? muted,
+    Color? green,
+    Color? red,
+    Color? amber,
+    Color? onPrimary,
+    LinearGradient? primaryGradient,
+    LinearGradient? heroGradient,
+  }) {
+    return AppPalette(
+      background: background ?? this.background,
+      surface: surface ?? this.surface,
+      surfaceRaised: surfaceRaised ?? this.surfaceRaised,
+      border: border ?? this.border,
+      primary: primary ?? this.primary,
+      primaryDark: primaryDark ?? this.primaryDark,
+      accent: accent ?? this.accent,
+      text: text ?? this.text,
+      secondary: secondary ?? this.secondary,
+      muted: muted ?? this.muted,
+      green: green ?? this.green,
+      red: red ?? this.red,
+      amber: amber ?? this.amber,
+      onPrimary: onPrimary ?? this.onPrimary,
+      primaryGradient: primaryGradient ?? this.primaryGradient,
+      heroGradient: heroGradient ?? this.heroGradient,
+    );
+  }
+
+  @override
+  AppPalette lerp(covariant AppPalette? other, double t) {
+    if (other == null) return this;
+    return AppPalette(
+      background: Color.lerp(background, other.background, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      surfaceRaised: Color.lerp(surfaceRaised, other.surfaceRaised, t)!,
+      border: Color.lerp(border, other.border, t)!,
+      primary: Color.lerp(primary, other.primary, t)!,
+      primaryDark: Color.lerp(primaryDark, other.primaryDark, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      text: Color.lerp(text, other.text, t)!,
+      secondary: Color.lerp(secondary, other.secondary, t)!,
+      muted: Color.lerp(muted, other.muted, t)!,
+      green: Color.lerp(green, other.green, t)!,
+      red: Color.lerp(red, other.red, t)!,
+      amber: Color.lerp(amber, other.amber, t)!,
+      onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
+      primaryGradient: LinearGradient.lerp(
+        primaryGradient,
+        other.primaryGradient,
+        t,
+      )!,
+      heroGradient: LinearGradient.lerp(heroGradient, other.heroGradient, t)!,
+    );
+  }
 }
 
-ThemeData buildAppTheme() {
-  const colorScheme = ColorScheme.dark(
-    primary: AppColors.primary,
-    onPrimary: AppColors.onPrimary,
-    secondary: AppColors.accent,
-    onSecondary: AppColors.background,
-    surface: AppColors.surface,
-    onSurface: AppColors.text,
-    surfaceContainerHighest: AppColors.surfaceRaised,
-    error: AppColors.red,
-    onError: AppColors.background,
-    outline: AppColors.border,
+extension AppThemeContext on BuildContext {
+  AppPalette get colors => Theme.of(this).extension<AppPalette>()!;
+}
+
+ThemeData buildAppTheme(Brightness brightness) {
+  final palette = brightness == Brightness.dark
+      ? AppPalette.dark
+      : AppPalette.light;
+  final colorScheme = ColorScheme(
+    brightness: brightness,
+    primary: palette.primary,
+    onPrimary: palette.onPrimary,
+    secondary: palette.accent,
+    onSecondary: palette.background,
+    surface: palette.surface,
+    onSurface: palette.text,
+    surfaceContainerHighest: palette.surfaceRaised,
+    error: palette.red,
+    onError: Colors.white,
+    outline: palette.border,
   );
 
   return ThemeData(
     useMaterial3: true,
+    brightness: brightness,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: AppColors.background,
+    extensions: [palette],
+    scaffoldBackgroundColor: palette.background,
     splashFactory: InkSparkle.splashFactory,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.background,
-      foregroundColor: AppColors.text,
+    appBarTheme: AppBarTheme(
+      backgroundColor: palette.background,
+      foregroundColor: palette.text,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        color: AppColors.text,
+        color: palette.text,
         fontSize: 18,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.2,
       ),
     ),
     cardTheme: CardThemeData(
-      color: AppColors.surface,
+      color: palette.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: palette.border),
       ),
       margin: EdgeInsets.zero,
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.onPrimary,
+        backgroundColor: palette.primary,
+        foregroundColor: palette.onPrimary,
         minimumSize: const Size.fromHeight(56),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -74,101 +221,98 @@ ThemeData buildAppTheme() {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.text,
-        backgroundColor: AppColors.surface,
+        foregroundColor: palette.text,
+        backgroundColor: palette.surface,
         minimumSize: const Size.fromHeight(56),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: palette.border),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      style: TextButton.styleFrom(foregroundColor: palette.primary),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surface,
-      hintStyle: const TextStyle(color: AppColors.muted, fontSize: 15),
-      labelStyle: const TextStyle(color: AppColors.secondary, fontSize: 14),
-      floatingLabelStyle: const TextStyle(
-        color: AppColors.primary,
-        fontSize: 13,
-      ),
-      prefixIconColor: AppColors.secondary,
+      fillColor: palette.surface,
+      hintStyle: TextStyle(color: palette.muted, fontSize: 15),
+      labelStyle: TextStyle(color: palette.secondary, fontSize: 14),
+      floatingLabelStyle: TextStyle(color: palette.primary, fontSize: 13),
+      prefixIconColor: palette.secondary,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 19),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: palette.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: palette.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
+        borderSide: BorderSide(color: palette.primary, width: 1.4),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: AppColors.red),
+        borderSide: BorderSide(color: palette.red),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: AppColors.red, width: 1.4),
+        borderSide: BorderSide(color: palette.red, width: 1.4),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.surfaceRaised,
-      contentTextStyle: const TextStyle(color: AppColors.text, fontSize: 15),
+      backgroundColor: palette.surfaceRaised,
+      contentTextStyle: TextStyle(color: palette.text, fontSize: 15),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: palette.border),
       ),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: AppColors.surfaceRaised,
+      backgroundColor: palette.surfaceRaised,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(26),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: palette.border),
       ),
-      titleTextStyle: const TextStyle(
-        color: AppColors.text,
+      titleTextStyle: TextStyle(
+        color: palette.text,
         fontSize: 20,
         fontWeight: FontWeight.w700,
       ),
-      contentTextStyle: const TextStyle(
-        color: AppColors.secondary,
+      contentTextStyle: TextStyle(
+        color: palette.secondary,
         fontSize: 15,
         height: 1.55,
       ),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: AppColors.surface,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: palette.surface,
       surfaceTintColor: Colors.transparent,
-      modalBackgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(
+      modalBackgroundColor: palette.surface,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
     ),
-    navigationBarTheme: const NavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      indicatorColor: Color(0x26A895FF),
-      iconTheme: WidgetStatePropertyAll(IconThemeData(color: AppColors.text)),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: palette.surface,
+      indicatorColor: palette.primary.withValues(alpha: 0.13),
+      iconTheme: WidgetStatePropertyAll(IconThemeData(color: palette.text)),
       labelTextStyle: WidgetStatePropertyAll(
-        TextStyle(color: AppColors.text, fontSize: 12),
+        TextStyle(color: palette.text, fontSize: 12),
       ),
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: AppColors.primary,
-      linearTrackColor: AppColors.border,
-      circularTrackColor: AppColors.border,
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: palette.primary,
+      linearTrackColor: palette.border,
+      circularTrackColor: palette.border,
     ),
-    dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1),
+    dividerTheme: DividerThemeData(color: palette.border, thickness: 1),
     textSelectionTheme: TextSelectionThemeData(
-      cursorColor: AppColors.primary,
-      selectionColor: AppColors.primary.withValues(alpha: 0.28),
-      selectionHandleColor: AppColors.primary,
+      cursorColor: palette.primary,
+      selectionColor: palette.primary.withValues(alpha: 0.28),
+      selectionHandleColor: palette.primary,
     ),
   );
 }

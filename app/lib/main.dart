@@ -42,7 +42,9 @@ class SnapFixApp extends StatelessWidget {
         builder: (_, _) => MaterialApp(
           title: 'SnapFix',
           debugShowCheckedModeBanner: false,
-          theme: buildAppTheme(),
+          theme: buildAppTheme(Brightness.light),
+          darkTheme: buildAppTheme(Brightness.dark),
+          themeMode: settings.appearance.themeMode,
           locale: settings.locale,
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -103,8 +105,8 @@ class _RestoringView extends StatelessWidget {
               const SizedBox(height: 22),
               Text(
                 context.tr('SnapFix 随手修'),
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: context.colors.text,
                   fontSize: 21,
                   fontWeight: FontWeight.w700,
                 ),
@@ -138,16 +140,16 @@ class _RestoreErrorView extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.cloud_off_outlined,
-                  color: AppColors.primary,
+                  color: context.colors.primary,
                   size: 48,
                 ),
                 const SizedBox(height: 20),
                 Text(
                   context.tr('暂时无法恢复账号'),
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: context.colors.text,
                     fontSize: 23,
                     fontWeight: FontWeight.w700,
                   ),
@@ -156,8 +158,8 @@ class _RestoreErrorView extends StatelessWidget {
                 Text(
                   context.tr(auth.restoreError!),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: TextStyle(
+                    color: context.colors.secondary,
                     fontSize: 14,
                     height: 1.55,
                   ),
@@ -197,15 +199,30 @@ class _MainScaffoldState extends State<MainScaffold> {
   final _profileKey = GlobalKey<ProfilePageState>();
   int _index = 0;
 
+  void _selectTab(int index) {
+    setState(() => _index = index);
+    if (index == 1) _archiveKey.currentState?.reload();
+    if (index == 2) _profileKey.currentState?.reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _index,
         children: [
-          HomePage(api: widget.api, user: widget.auth.user!),
+          HomePage(
+            api: widget.api,
+            user: widget.auth.user!,
+            onProfileTap: () => _selectTab(2),
+          ),
           ArchivePage(key: _archiveKey, api: widget.api),
-          ProfilePage(key: _profileKey, api: widget.api, auth: widget.auth),
+          ProfilePage(
+            key: _profileKey,
+            api: widget.api,
+            auth: widget.auth,
+            onHistoryTap: () => _selectTab(1),
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -214,9 +231,9 @@ class _MainScaffoldState extends State<MainScaffold> {
           height: 68,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.96),
+            color: context.colors.surface.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x66000000),
@@ -287,11 +304,13 @@ class _NavItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(18),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 240),
+            duration: context.reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 240),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               color: selected
-                  ? AppColors.primary.withValues(alpha: 0.13)
+                  ? context.colors.primary.withValues(alpha: 0.13)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(18),
             ),
@@ -301,13 +320,17 @@ class _NavItem extends StatelessWidget {
                 Icon(
                   selected ? selectedIcon : icon,
                   size: 21,
-                  color: selected ? AppColors.primary : AppColors.secondary,
+                  color: selected
+                      ? context.colors.primary
+                      : context.colors.secondary,
                 ),
                 const SizedBox(width: 7),
                 Text(
                   label,
                   style: TextStyle(
-                    color: selected ? AppColors.primary : AppColors.secondary,
+                    color: selected
+                        ? context.colors.primary
+                        : context.colors.secondary,
                     fontSize: 13,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),

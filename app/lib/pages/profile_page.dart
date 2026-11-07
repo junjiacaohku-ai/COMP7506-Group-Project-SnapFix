@@ -10,10 +10,16 @@ import '../ui.dart';
 import '../util/toast.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, required this.api, required this.auth});
+  const ProfilePage({
+    super.key,
+    required this.api,
+    required this.auth,
+    required this.onHistoryTap,
+  });
 
   final ApiClient api;
   final AuthController auth;
+  final VoidCallback onHistoryTap;
 
   @override
   State<ProfilePage> createState() => ProfilePageState();
@@ -58,9 +64,38 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showPrivacy() => showPrivacyDialog(context);
-
   void _selectLanguage() {
+    final settings = AppSettingsScope.of(context);
+    _showPreferenceSheet<AppLanguage>(
+      title: '选择应用语言',
+      options: AppLanguage.values,
+      current: settings.language,
+      label: (value) => value.label,
+      onSelected: settings.setLanguage,
+      errorMessage: '语言偏好保存失败',
+    );
+  }
+
+  void _selectAppearance() {
+    final settings = AppSettingsScope.of(context);
+    _showPreferenceSheet<AppAppearance>(
+      title: '选择外观',
+      options: AppAppearance.values,
+      current: settings.appearance,
+      label: (value) => value.label,
+      onSelected: settings.setAppearance,
+      errorMessage: '外观偏好保存失败',
+    );
+  }
+
+  void _showPreferenceSheet<T>({
+    required String title,
+    required List<T> options,
+    required T current,
+    required String Function(T) label,
+    required Future<bool> Function(T) onSelected,
+    required String errorMessage,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -72,28 +107,30 @@ class ProfilePageState extends State<ProfilePage> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  sheetContext.tr('选择应用语言'),
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  sheetContext.tr(title),
+                  style: TextStyle(
+                    color: sheetContext.colors.text,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
-            for (final language in AppLanguage.values)
+            for (final option in options)
               ListTile(
-                title: Text(language.label),
-                trailing: AppSettingsScope.of(sheetContext).language == language
-                    ? const Icon(Icons.check_rounded, color: AppColors.primary)
+                title: Text(sheetContext.tr(label(option))),
+                trailing: current == option
+                    ? Icon(
+                        Icons.check_rounded,
+                        color: sheetContext.colors.primary,
+                      )
                     : null,
                 onTap: () async {
-                  final saved = await AppSettingsScope.of(sheetContext)
-                      .setLanguage(language);
+                  final saved = await onSelected(option);
                   if (!sheetContext.mounted) return;
                   Navigator.of(sheetContext).pop();
                   if (!saved && mounted) {
-                    showAppToast(context, context.tr('语言偏好保存失败'));
+                    showAppToast(context, context.tr(errorMessage));
                   }
                 },
               ),
@@ -103,43 +140,50 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _setReduceMotion(bool value) async {
+    final saved = await AppSettingsScope.of(context).setReduceMotion(value);
+    if (!saved && mounted) {
+      showAppToast(context, context.tr('动态效果偏好保存失败'));
+    }
+  }
+
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(context.tr('退出当前账号？')),
-        content: Text(context.tr('诊断记录仍会保留在账号中，下次登录可以继续查看。')),
+        title: Text(dialogContext.tr('退出当前账号？')),
+        content: Text(dialogContext.tr('诊断记录仍会保留在账号中，下次登录可以继续查看。')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.tr('取消')),
+            child: Text(dialogContext.tr('取消')),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              context.tr('退出登录'),
-              style: const TextStyle(color: AppColors.red),
+              dialogContext.tr('退出登录'),
+              style: TextStyle(color: dialogContext.colors.red),
             ),
           ),
         ],
       ),
     );
-    if (confirmed == true) {
-      await widget.auth.logout();
-    }
+    if (confirmed == true) await widget.auth.logout();
   }
 
   @override
   Widget build(BuildContext context) {
     final user = widget.auth.user;
     if (user == null) return const SizedBox.shrink();
+    final colors = context.colors;
+    final settings = AppSettingsScope.of(context);
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: reload,
-            color: AppColors.primary,
-            backgroundColor: AppColors.surfaceRaised,
+            color: colors.primary,
+            backgroundColor: colors.surfaceRaised,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -148,54 +192,58 @@ class ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   context.tr('我的'),
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 30,
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 28,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.8,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
                 SurfaceCard(
                   radius: 26,
                   padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
                       Container(
-                        width: 62,
-                        height: 62,
+                        width: 58,
+                        height: 58,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(21),
+                          gradient: colors.primaryGradient,
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           user.initials,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 23,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 15),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               user.name,
-                              style: const TextStyle(
-                                color: AppColors.text,
-                                fontSize: 21,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colors.text,
+                                fontSize: 19,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(height: 5),
                             Text(
                               user.email ?? context.tr('第三方账号登录'),
-                              style: const TextStyle(
-                                color: AppColors.secondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colors.secondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -205,8 +253,8 @@ class ProfilePageState extends State<ProfilePage> {
                                 'year': user.createdAt.year,
                                 'month': user.createdAt.month,
                               }),
-                              style: const TextStyle(
-                                color: AppColors.muted,
+                              style: TextStyle(
+                                color: colors.muted,
                                 fontSize: 11,
                               ),
                             ),
@@ -216,136 +264,119 @@ class ProfilePageState extends State<ProfilePage> {
                       IconButton(
                         onPressed: _editName,
                         tooltip: context.tr('编辑昵称'),
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.edit_outlined,
-                          color: AppColors.primary,
+                          color: colors.primary,
                           size: 20,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 24),
+                _SectionLabel('账号'),
                 SurfaceCard(
-                  radius: 22,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.inventory_2_outlined,
-                          color: AppColors.primary,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 13),
-                      Expanded(
-                        child: Text(
-                          context.tr('个人诊断档案'),
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _sessionCount == null
-                            ? '—'
-                            : context.tr('{count} 条', {'count': _sessionCount}),
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                  padding: EdgeInsets.zero,
+                  child: _SettingsTile(
+                    icon: Icons.inventory_2_outlined,
+                    title: '个人诊断档案',
+                    subtitle: _sessionCount == null
+                        ? '查看全部诊断与维修进度'
+                        : context.tr('{count} 条记录', {'count': _sessionCount}),
+                    onTap: widget.onHistoryTap,
                   ),
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: reload,
                     icon: const Icon(Icons.refresh_rounded, size: 17),
                     label: Text(context.tr(_error!)),
                   ),
                 ],
-                const SizedBox(height: 28),
-                const _SectionLabel('账号与数据'),
+                const SizedBox(height: 22),
+                _SectionLabel('偏好设置'),
                 SurfaceCard(
                   padding: EdgeInsets.zero,
                   child: Column(
                     children: [
                       _SettingsTile(
-                        icon: Icons.person_outline_rounded,
-                        title: '编辑昵称',
-                        subtitle: user.name,
-                        onTap: _editName,
+                        icon: Icons.brightness_6_outlined,
+                        title: '外观',
+                        subtitle: settings.appearance.label,
+                        onTap: _selectAppearance,
                       ),
                       const Divider(height: 1, indent: 60),
                       _SettingsTile(
                         icon: Icons.language_rounded,
                         title: '语言',
-                        subtitle: AppSettingsScope.of(context).language.label,
+                        subtitle: settings.language.label,
                         onTap: _selectLanguage,
                       ),
                       const Divider(height: 1, indent: 60),
                       _SettingsTile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: '隐私与数据',
-                        subtitle: '照片、诊断记录与登录令牌',
-                        onTap: _showPrivacy,
+                        icon: Icons.motion_photos_off_outlined,
+                        title: '减少动态效果',
+                        subtitle: '减少装饰动画和页面过渡',
+                        trailing: Switch.adaptive(
+                          value: settings.reduceMotion,
+                          onChanged: _setReduceMotion,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 22),
-                const _SectionLabel('诊断服务'),
+                _SectionLabel('数据与隐私'),
                 SurfaceCard(
                   padding: EdgeInsets.zero,
                   child: _SettingsTile(
-                    icon: Icons.cloud_outlined,
-                    title: _health == null ? '服务状态未知' : '诊断服务已连接',
-                    subtitle: _health == null
-                        ? '下拉可重新检查'
-                        : _health!.mock
-                        ? '本地演示数据源'
-                        : 'Gemini 在线诊断',
-                    trailing: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _health == null
-                            ? AppColors.muted
-                            : AppColors.green,
-                      ),
-                    ),
+                    icon: Icons.privacy_tip_outlined,
+                    title: '隐私与数据',
+                    subtitle: '照片、诊断记录与登录令牌',
+                    onTap: () => showPrivacyDialog(context),
                   ),
                 ),
                 const SizedBox(height: 22),
-                const _SectionLabel('关于'),
+                _SectionLabel('关于'),
                 SurfaceCard(
                   padding: EdgeInsets.zero,
-                  child: _SettingsTile(
-                    icon: Icons.info_outline_rounded,
-                    title: 'SnapFix 随手修',
-                    subtitle: '版本 1.0.0 · Solo',
+                  child: Column(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.cloud_outlined,
+                        title: _health == null ? '服务状态未知' : '诊断服务已连接',
+                        subtitle: _health == null
+                            ? '下拉可重新检查'
+                            : _health!.mock
+                            ? '本地演示数据源'
+                            : 'Gemini 在线诊断',
+                        trailing: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _health == null
+                                ? colors.muted
+                                : colors.green,
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.info_outline_rounded,
+                        title: 'SnapFix 随手修',
+                        subtitle: '版本 1.0.0 · Solo',
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 28),
                 OutlinedButton.icon(
                   onPressed: _confirmLogout,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.red,
-                    side: BorderSide(
-                      color: AppColors.red.withValues(alpha: 0.28),
-                    ),
+                    foregroundColor: colors.red,
+                    side: BorderSide(color: colors.red.withValues(alpha: 0.28)),
                   ),
                   icon: const Icon(Icons.logout_rounded, size: 20),
                   label: Text(context.tr('退出登录')),
@@ -370,8 +401,8 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 9),
       child: Text(
         context.tr(label),
-        style: const TextStyle(
-          color: AppColors.secondary,
+        style: TextStyle(
+          color: context.colors.secondary,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -397,14 +428,15 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 22),
+            Icon(icon, color: colors.primary, size: 22),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -412,8 +444,8 @@ class _SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     context.tr(title),
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: colors.text,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -421,10 +453,7 @@ class _SettingsTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     context.tr(subtitle),
-                    style: const TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: colors.secondary, fontSize: 11),
                   ),
                 ],
               ),
@@ -432,11 +461,7 @@ class _SettingsTile extends StatelessWidget {
             if (trailing != null)
               trailing!
             else if (onTap != null)
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.muted,
-                size: 20,
-              ),
+              Icon(Icons.chevron_right_rounded, color: colors.muted, size: 20),
           ],
         ),
       ),
@@ -502,11 +527,11 @@ class _EditNameDialogState extends State<_EditNameDialog> {
             controller: _controller,
             autofocus: true,
             maxLength: 30,
-            style: const TextStyle(color: AppColors.text),
+            style: TextStyle(color: context.colors.text),
             decoration: InputDecoration(
               labelText: context.tr('你的称呼'),
-              counterStyle: const TextStyle(
-                color: AppColors.muted,
+              counterStyle: TextStyle(
+                color: context.colors.muted,
                 fontSize: 11,
               ),
             ),
@@ -517,7 +542,7 @@ class _EditNameDialogState extends State<_EditNameDialog> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 context.tr(_error!),
-                style: const TextStyle(color: AppColors.red, fontSize: 12),
+                style: TextStyle(color: context.colors.red, fontSize: 12),
               ),
             ),
         ],

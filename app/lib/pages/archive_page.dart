@@ -72,14 +72,14 @@ class ArchivePageState extends State<ArchivePage> {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(
               context.tr('取消'),
-              style: const TextStyle(color: AppColors.secondary),
+              style: TextStyle(color: context.colors.secondary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
               context.tr('删除'),
-              style: const TextStyle(color: AppColors.red),
+              style: TextStyle(color: context.colors.red),
             ),
           ),
         ],
@@ -114,8 +114,8 @@ class ArchivePageState extends State<ArchivePage> {
                         children: [
                           Text(
                             context.tr('诊断档案'),
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: context.colors.text,
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.8,
@@ -124,8 +124,8 @@ class ArchivePageState extends State<ArchivePage> {
                           const SizedBox(height: 6),
                           Text(
                             context.tr('每一次维修，都有据可查'),
-                            style: const TextStyle(
-                              color: AppColors.secondary,
+                            style: TextStyle(
+                              color: context.colors.secondary,
                               fontSize: 13,
                             ),
                           ),
@@ -185,8 +185,8 @@ class ArchivePageState extends State<ArchivePage> {
       );
     }
     return RefreshIndicator(
-      color: AppColors.primary,
-      backgroundColor: AppColors.surfaceRaised,
+      color: context.colors.primary,
+      backgroundColor: context.colors.surfaceRaised,
       onRefresh: reload,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(
@@ -213,10 +213,10 @@ class ArchivePageState extends State<ArchivePage> {
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 24),
               decoration: BoxDecoration(
-                color: AppColors.red.withValues(alpha: 0.85),
+                color: context.colors.red.withValues(alpha: 0.85),
                 borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.delete_outline_rounded,
                 color: Colors.white,
                 size: 26,
@@ -238,13 +238,13 @@ class _SessionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final decision = decisionStyle(session.decision);
+    final decision = decisionStyle(session.decision, context.colors);
     final brandModel = [
       if (session.brand?.isNotEmpty ?? false) session.brand,
       if (session.model?.isNotEmpty ?? false) session.model,
     ].join(' ');
     return Material(
-      color: AppColors.surface,
+      color: context.colors.surface,
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
@@ -253,7 +253,7 @@ class _SessionTile extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
           ),
           child: Column(
             children: [
@@ -263,12 +263,12 @@ class _SessionTile extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color: context.colors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       deviceCategoryIcon(session.deviceCategory),
-                      color: AppColors.primary,
+                      color: context.colors.primary,
                       size: 24,
                     ),
                   ),
@@ -281,8 +281,8 @@ class _SessionTile extends StatelessWidget {
                           context.tr(
                             deviceCategoryLabel(session.deviceCategory),
                           ),
-                          style: const TextStyle(
-                            color: AppColors.text,
+                          style: TextStyle(
+                            color: context.colors.text,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
@@ -293,8 +293,8 @@ class _SessionTile extends StatelessWidget {
                             brandModel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.secondary,
+                            style: TextStyle(
+                              color: context.colors.secondary,
                               fontSize: 12,
                             ),
                           ),
@@ -302,9 +302,9 @@ class _SessionTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right_rounded,
-                    color: AppColors.muted,
+                    color: context.colors.muted,
                     size: 21,
                   ),
                 ],
@@ -315,8 +315,8 @@ class _SessionTile extends StatelessWidget {
                   Expanded(
                     child: Text(
                       formatDateTime(session.createdAt),
-                      style: const TextStyle(
-                        color: AppColors.muted,
+                      style: TextStyle(
+                        color: context.colors.muted,
                         fontSize: 11,
                       ),
                     ),
@@ -362,19 +362,19 @@ class _CenteredHint extends StatelessWidget {
               height: 82,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: context.colors.primary.withValues(alpha: 0.08),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.16),
+                  color: context.colors.primary.withValues(alpha: 0.16),
                 ),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 34),
+              child: Icon(icon, color: context.colors.primary, size: 34),
             ),
             const SizedBox(height: 20),
             Text(
               context.tr(title),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.text,
+              style: TextStyle(
+                color: context.colors.text,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -383,8 +383,8 @@ class _CenteredHint extends StatelessWidget {
             Text(
               context.tr(text),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.secondary,
+              style: TextStyle(
+                color: context.colors.secondary,
                 fontSize: 13,
                 height: 1.55,
               ),

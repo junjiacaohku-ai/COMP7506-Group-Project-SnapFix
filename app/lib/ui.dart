@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'l10n.dart';
+import 'settings.dart';
 import 'theme.dart';
 
 class AppBackground extends StatelessWidget {
@@ -11,10 +12,12 @@ class AppBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final light = Theme.of(context).brightness == Brightness.light;
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: AppColors.background),
+        ColoredBox(color: colors.background),
         if (glow) ...[
           Positioned(
             top: -180,
@@ -23,9 +26,12 @@ class AppBackground extends StatelessWidget {
               child: Container(
                 width: 430,
                 height: 430,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    colors: [Color(0x269B8CFF), Color(0x009B8CFF)],
+                    colors: [
+                      colors.primary.withValues(alpha: light ? 0.08 : 0.15),
+                      colors.primary.withValues(alpha: 0),
+                    ],
                   ),
                 ),
               ),
@@ -38,9 +44,12 @@ class AppBackground extends StatelessWidget {
               child: Container(
                 width: 500,
                 height: 500,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    colors: [Color(0x1467E8F9), Color(0x0067E8F9)],
+                    colors: [
+                      colors.accent.withValues(alpha: light ? 0.04 : 0.08),
+                      colors.accent.withValues(alpha: 0),
+                    ],
                   ),
                 ),
               ),
@@ -64,11 +73,11 @@ class BrandMark extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
+        gradient: context.colors.primaryGradient,
         borderRadius: BorderRadius.circular(size * 0.32),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.22),
+            color: context.colors.primary.withValues(alpha: 0.22),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
@@ -88,35 +97,36 @@ class AppPill extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.color = AppColors.primary,
+    this.color,
     this.backgroundColor,
   });
 
   final String label;
   final IconData? icon;
-  final Color color;
+  final Color? color;
   final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
+    final foreground = color ?? context.colors.primary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: backgroundColor ?? color.withValues(alpha: 0.1),
+        color: backgroundColor ?? foreground.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        border: Border.all(color: foreground.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 13, color: color),
+            Icon(icon, size: 13, color: foreground),
             const SizedBox(width: 5),
           ],
           Text(
             context.tr(label),
             style: TextStyle(
-              color: color,
+              color: foreground,
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,
@@ -133,15 +143,15 @@ class SurfaceCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(18),
-    this.color = AppColors.surface,
-    this.borderColor = AppColors.border,
+    this.color,
+    this.borderColor,
     this.radius = 22,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final Color color;
-  final Color borderColor;
+  final Color? color;
+  final Color? borderColor;
   final double radius;
 
   @override
@@ -149,9 +159,9 @@ class SurfaceCard extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color,
+        color: color ?? context.colors.surface,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: borderColor ?? context.colors.border),
       ),
       child: child,
     );
@@ -182,11 +192,13 @@ class GradientButton extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          gradient: context.colors.primaryGradient,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: enabled ? 0.2 : 0),
+              color: context.colors.primary.withValues(
+                alpha: enabled ? 0.2 : 0,
+              ),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -214,13 +226,17 @@ class GradientButton extends StatelessWidget {
                           Icon(icon, color: Colors.white, size: 21),
                           const SizedBox(width: 9),
                         ],
-                        Text(
-                          context.tr(label),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.1,
+                        Flexible(
+                          child: Text(
+                            context.tr(label),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
                           ),
                         ),
                       ],
@@ -237,9 +253,9 @@ void showPrivacyDialog(BuildContext context) {
   showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      icon: const Icon(
+      icon: Icon(
         Icons.privacy_tip_outlined,
-        color: AppColors.primary,
+        color: dialogContext.colors.primary,
         size: 32,
       ),
       title: Text(dialogContext.tr('隐私与数据')),
@@ -271,6 +287,7 @@ class ScanFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return SizedBox.square(
       dimension: size,
       child: Stack(
@@ -283,8 +300,8 @@ class ScanFrame extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.2),
-                  AppColors.primary.withValues(alpha: 0),
+                  colors.primary.withValues(alpha: 0.2),
+                  colors.primary.withValues(alpha: 0),
                 ],
               ),
             ),
@@ -293,11 +310,11 @@ class ScanFrame extends StatelessWidget {
             width: size * 0.48,
             height: size * 0.48,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: colors.primaryGradient,
               borderRadius: BorderRadius.circular(size * 0.16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
+                  color: colors.primary.withValues(alpha: 0.25),
                   blurRadius: 32,
                 ),
               ],
@@ -306,7 +323,7 @@ class ScanFrame extends StatelessWidget {
           ),
           CustomPaint(
             size: Size.square(size),
-            painter: const _ScanCornersPainter(),
+            painter: _ScanCornersPainter(colors.primary),
           ),
           Positioned(
             top: size * 0.15,
@@ -314,13 +331,13 @@ class ScanFrame extends StatelessWidget {
             child: Container(
               width: size * 0.18,
               height: size * 0.18,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.surfaceRaised,
+                color: colors.surfaceRaised,
               ),
               child: Icon(
                 Icons.auto_awesome_rounded,
-                color: AppColors.accent,
+                color: colors.accent,
                 size: size * 0.11,
               ),
             ),
@@ -332,12 +349,14 @@ class ScanFrame extends StatelessWidget {
 }
 
 class _ScanCornersPainter extends CustomPainter {
-  const _ScanCornersPainter();
+  const _ScanCornersPainter(this.color);
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.75)
+      ..color = color.withValues(alpha: 0.75)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
@@ -362,7 +381,8 @@ class _ScanCornersPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ScanCornersPainter oldDelegate) => false;
+  bool shouldRepaint(_ScanCornersPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class AppPageRoute<T> extends PageRouteBuilder<T> {
@@ -371,7 +391,8 @@ class AppPageRoute<T> extends PageRouteBuilder<T> {
         transitionDuration: const Duration(milliseconds: 360),
         reverseTransitionDuration: const Duration(milliseconds: 260),
         pageBuilder: (_, _, _) => child,
-        transitionsBuilder: (_, animation, _, child) {
+        transitionsBuilder: (context, animation, _, child) {
+          if (context.reduceMotion) return child;
           final curved = CurvedAnimation(
             parent: animation,
             curve: Curves.easeOutCubic,

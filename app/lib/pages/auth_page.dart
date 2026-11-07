@@ -25,11 +25,14 @@ class AuthPage extends StatefulWidget {
   State<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends State<AuthPage> {
+class _AuthPageState extends State<AuthPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  late final AnimationController _entry;
+  bool _entryStarted = false;
 
   bool _register = false;
   bool _obscurePassword = true;
@@ -39,7 +42,32 @@ class _AuthPageState extends State<AuthPage> {
   bool get _busy => _pending != null;
 
   @override
+  void initState() {
+    super.initState();
+    _entry = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_entryStarted) {
+      _entryStarted = true;
+      if (context.reduceMotion) {
+        _entry.value = 1;
+      } else {
+        _entry.forward();
+      }
+    } else if (context.reduceMotion) {
+      _entry.value = 1;
+    }
+  }
+
+  @override
   void dispose() {
+    _entry.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -128,305 +156,333 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) {
     final showApple = Platform.isIOS || Platform.isMacOS;
     final showGoogle = SocialAuthService.googleConfigured;
+    final entrance = CurvedAnimation(
+      parent: _entry,
+      curve: Curves.easeOutCubic,
+    );
     return Scaffold(
       body: AppBackground(
         glow: false,
         child: SafeArea(
-          child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: const EdgeInsets.fromLTRB(22, 16, 22, 18),
-              children: [
-                Row(
+          child: FadeTransition(
+            opacity: entrance,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.012),
+                end: Offset.zero,
+              ).animate(entrance),
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(22, 16, 22, 18),
                   children: [
-                    const BrandMark(size: 34),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'SnapFix',
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const Spacer(),
-                    _LanguageMenu(
-                      current: AppSettingsScope.of(context).language,
-                      onSelected: _selectLanguage,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 34),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    context.tr(_register ? '创建账号' : '欢迎回来'),
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 27,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 9),
-                Text(
-                  context.tr('用一张照片，找到家电故障的解决办法。'),
-                  style: const TextStyle(
-                    color: AppColors.secondary,
-                    fontSize: 13,
-                    height: 1.55,
-                  ),
-                ),
-                const SizedBox(height: 26),
-                if (showApple || showGoogle) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (showApple)
-                        _SocialButton(
-                          icon: const Icon(Icons.apple, size: 21),
-                          label: context.tr('使用 Apple 继续'),
-                          pendingLabel: context.tr('正在通过 Apple 登录'),
-                          pending: _pending == _AuthMethod.apple,
-                          busy: _busy,
-                          onPressed: () => _socialLogin(
-                            _AuthMethod.apple,
-                            widget.auth.loginWithApple,
-                          ),
-                        ),
-                      if (showApple && showGoogle) const SizedBox(height: 10),
-                      if (showGoogle)
-                        _SocialButton(
-                          icon: Image.asset(
-                            'assets/branding/google_logo.png',
-                            width: 18,
-                            height: 18,
-                          ),
-                          label: context.tr('使用 Google 继续'),
-                          pendingLabel: context.tr('正在连接 Google'),
-                          pending: _pending == _AuthMethod.google,
-                          busy: _busy,
-                          onPressed: () => _socialLogin(
-                            _AuthMethod.google,
-                            widget.auth.loginWithGoogle,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider()),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          context.tr('或继续使用邮箱'),
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                      const Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                ],
-                AutofillGroup(
-                  child: Form(
-                    key: _formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    child: Column(
+                    Row(
                       children: [
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          alignment: Alignment.topCenter,
-                          child: _register
-                              ? Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: _AuthField(
-                                    controller: _nameController,
-                                    hintText: context.tr('你的称呼'),
-                                    icon: Icons.person_outline_rounded,
-                                    enabled: !_busy,
-                                    textInputAction: TextInputAction.next,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                    autofillHints: const [AutofillHints.name],
-                                    onChanged: (_) => _clearError(),
-                                    validator: (value) {
-                                      final length = value?.trim().length ?? 0;
-                                      if (length == 0 || length > 30) {
-                                        return context.tr('昵称需为 1–30 个字符');
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                )
-                              : const SizedBox(width: double.infinity),
-                        ),
-                        _AuthField(
-                          controller: _emailController,
-                          hintText: context.tr('邮箱地址'),
-                          icon: Icons.mail_outline_rounded,
-                          enabled: !_busy,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.email],
-                          onChanged: (_) => _clearError(),
-                          validator: (value) {
-                            final email = value?.trim() ?? '';
-                            if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                                .hasMatch(email)) {
-                              return context.tr('请输入有效的邮箱地址');
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        _AuthField(
-                          controller: _passwordController,
-                          hintText: context.tr(
-                            _register ? '至少 8 个字符' : '输入账号密码',
+                        const BrandMark(size: 34),
+                        const SizedBox(width: 10),
+                        Text(
+                          'SnapFix',
+                          style: TextStyle(
+                            color: context.colors.text,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
                           ),
-                          icon: Icons.lock_outline_rounded,
-                          enabled: !_busy,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
-                          enableSuggestions: false,
-                          autofillHints: [
-                            _register
-                                ? AutofillHints.newPassword
-                                : AutofillHints.password,
-                          ],
-                          onChanged: (_) => _clearError(),
-                          suffixIcon: IconButton(
-                            onPressed: _busy
-                                ? null
-                                : () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              color: AppColors.secondary,
-                              size: 19,
-                            ),
-                            tooltip: context.tr(
-                              _obscurePassword ? '显示密码' : '隐藏密码',
-                            ),
-                          ),
-                          validator: (value) {
-                            final length = value?.length ?? 0;
-                            if (!_register && length == 0) {
-                              return context.tr('请输入密码');
-                            }
-                            if (_register && length < 8) {
-                              return context.tr('密码至少需要 8 个字符');
-                            }
-                            if (length > 128) {
-                              return context.tr('密码不能超过 128 个字符');
-                            }
-                            return null;
-                          },
-                          onSubmitted: (_) => _submit(),
+                        ),
+                        const Spacer(),
+                        _LanguageMenu(
+                          current: AppSettingsScope.of(context).language,
+                          onSelected: _selectLanguage,
                         ),
                       ],
                     ),
-                  ),
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutCubic,
-                  child: _error == null
-                      ? const SizedBox(width: double.infinity)
-                      : Padding(
-                          padding: const EdgeInsets.only(top: 14),
-                          child: Semantics(
-                            liveRegion: true,
-                            child: _ErrorMessage(message: context.tr(_error!)),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 18),
-                Semantics(
-                  label: context.tr(
-                    _pending == _AuthMethod.email
-                        ? (_register ? '正在创建账号' : '正在登录')
-                        : (_register ? '创建账号' : '继续'),
-                  ),
-                  button: true,
-                  enabled: !_busy,
-                  excludeSemantics: true,
-                  onTap: _busy ? null : _submit,
-                  child: SizedBox(
-                    height: 48,
-                    child: FilledButton(
-                      onPressed: _busy ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: const Color(0xFF171322),
-                        disabledBackgroundColor: AppColors.primary.withValues(
-                          alpha: 0.45,
-                        ),
-                        disabledForegroundColor: const Color(0xFF171322),
-                        textStyle: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 34),
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        context.tr(_register ? '创建账号' : '欢迎回来'),
+                        style: TextStyle(
+                          color: context.colors.text,
+                          fontSize: 27,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          letterSpacing: -0.6,
                         ),
                       ),
-                      child: _pending == _AuthMethod.email
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF171322),
-                                strokeWidth: 2,
+                    ),
+                    const SizedBox(height: 9),
+                    Text(
+                      context.tr('用一张照片，找到家电故障的解决办法。'),
+                      style: TextStyle(
+                        color: context.colors.secondary,
+                        fontSize: 13,
+                        height: 1.55,
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    if (showApple || showGoogle) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (showApple)
+                            _SocialButton(
+                              icon: Icon(Icons.apple, size: 21),
+                              label: context.tr('使用 Apple 继续'),
+                              pendingLabel: context.tr('正在通过 Apple 登录'),
+                              pending: _pending == _AuthMethod.apple,
+                              busy: _busy,
+                              onPressed: () => _socialLogin(
+                                _AuthMethod.apple,
+                                widget.auth.loginWithApple,
                               ),
-                            )
-                          : Text(context.tr(_register ? '创建账号' : '继续')),
+                            ),
+                          if (showApple && showGoogle)
+                            const SizedBox(height: 10),
+                          if (showGoogle)
+                            _SocialButton(
+                              icon: Image.asset(
+                                'assets/branding/google_logo.png',
+                                width: 18,
+                                height: 18,
+                              ),
+                              label: context.tr('使用 Google 继续'),
+                              pendingLabel: context.tr('正在连接 Google'),
+                              pending: _pending == _AuthMethod.google,
+                              busy: _busy,
+                              onPressed: () => _socialLogin(
+                                _AuthMethod.google,
+                                widget.auth.loginWithGoogle,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              context.tr('或继续使用邮箱'),
+                              style: TextStyle(
+                                color: context.colors.muted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    AutofillGroup(
+                      child: Form(
+                        key: _formKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: Column(
+                          children: [
+                            AnimatedSize(
+                              duration: context.reduceMotion
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              alignment: Alignment.topCenter,
+                              child: _register
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: _AuthField(
+                                        controller: _nameController,
+                                        hintText: context.tr('你的称呼'),
+                                        icon: Icons.person_outline_rounded,
+                                        enabled: !_busy,
+                                        textInputAction: TextInputAction.next,
+                                        textCapitalization:
+                                            TextCapitalization.words,
+                                        autofillHints: const [
+                                          AutofillHints.name,
+                                        ],
+                                        onChanged: (_) => _clearError(),
+                                        validator: (value) {
+                                          final length =
+                                              value?.trim().length ?? 0;
+                                          if (length == 0 || length > 30) {
+                                            return context.tr('昵称需为 1–30 个字符');
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    )
+                                  : const SizedBox(width: double.infinity),
+                            ),
+                            _AuthField(
+                              controller: _emailController,
+                              hintText: context.tr('邮箱地址'),
+                              icon: Icons.mail_outline_rounded,
+                              enabled: !_busy,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.email],
+                              onChanged: (_) => _clearError(),
+                              validator: (value) {
+                                final email = value?.trim() ?? '';
+                                if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                    .hasMatch(email)) {
+                                  return context.tr('请输入有效的邮箱地址');
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _AuthField(
+                              controller: _passwordController,
+                              hintText: context.tr(
+                                _register ? '至少 8 个字符' : '输入账号密码',
+                              ),
+                              icon: Icons.lock_outline_rounded,
+                              enabled: !_busy,
+                              obscureText: _obscurePassword,
+                              textInputAction: TextInputAction.done,
+                              enableSuggestions: false,
+                              autofillHints: [
+                                _register
+                                    ? AutofillHints.newPassword
+                                    : AutofillHints.password,
+                              ],
+                              onChanged: (_) => _clearError(),
+                              suffixIcon: IconButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: context.colors.secondary,
+                                  size: 19,
+                                ),
+                                tooltip: context.tr(
+                                  _obscurePassword ? '显示密码' : '隐藏密码',
+                                ),
+                              ),
+                              validator: (value) {
+                                final length = value?.length ?? 0;
+                                if (!_register && length == 0) {
+                                  return context.tr('请输入密码');
+                                }
+                                if (_register && length < 8) {
+                                  return context.tr('密码至少需要 8 个字符');
+                                }
+                                if (length > 128) {
+                                  return context.tr('密码不能超过 128 个字符');
+                                }
+                                return null;
+                              },
+                              onSubmitted: (_) => _submit(),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    AnimatedSize(
+                      duration: context.reduceMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
+                      child: _error == null
+                          ? const SizedBox(width: double.infinity)
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 14),
+                              child: Semantics(
+                                liveRegion: true,
+                                child: _ErrorMessage(
+                                  message: context.tr(_error!),
+                                ),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 18),
+                    Semantics(
+                      label: context.tr(
+                        _pending == _AuthMethod.email
+                            ? (_register ? '正在创建账号' : '正在登录')
+                            : (_register ? '创建账号' : '继续'),
+                      ),
+                      button: true,
+                      enabled: !_busy,
+                      excludeSemantics: true,
+                      onTap: _busy ? null : _submit,
+                      child: SizedBox(
+                        height: 48,
+                        child: FilledButton(
+                          onPressed: _busy ? null : _submit,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: context.colors.primary,
+                            foregroundColor: context.colors.onPrimary,
+                            disabledBackgroundColor: context.colors.primary
+                                .withValues(alpha: 0.45),
+                            disabledForegroundColor: context.colors.onPrimary,
+                            textStyle: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _pending == _AuthMethod.email
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: context.colors.onPrimary,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(context.tr(_register ? '创建账号' : '继续')),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Center(
+                      child: TextButton(
+                        onPressed: _busy ? null : () => _setMode(!_register),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 40),
+                          textStyle: TextStyle(fontSize: 12),
+                        ),
+                        child: Text(
+                          context.tr(
+                            _register ? '已有账号？登录' : '首次使用 SnapFix？创建账号',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => showPrivacyDialog(context),
+                        icon: Icon(Icons.lock_outline_rounded, size: 14),
+                        label: Text(context.tr('账号与数据说明')),
+                        style: TextButton.styleFrom(
+                          foregroundColor: context.colors.muted,
+                          textStyle: TextStyle(fontSize: 11),
+                          minimumSize: const Size(48, 36),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Center(
-                  child: TextButton(
-                    onPressed: _busy ? null : () => _setMode(!_register),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 40),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                    child: Text(
-                      context.tr(_register ? '已有账号？登录' : '首次使用 SnapFix？创建账号'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => showPrivacyDialog(context),
-                    icon: const Icon(Icons.lock_outline_rounded, size: 14),
-                    label: Text(context.tr('账号与数据说明')),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.muted,
-                      textStyle: const TextStyle(fontSize: 11),
-                      minimumSize: const Size(48, 36),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -447,7 +503,7 @@ class _LanguageMenu extends StatelessWidget {
       initialValue: current,
       onSelected: onSelected,
       tooltip: context.tr('语言'),
-      color: AppColors.surfaceRaised,
+      color: context.colors.surfaceRaised,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       itemBuilder: (_) => [
         for (final language in AppLanguage.values)
@@ -456,15 +512,12 @@ class _LanguageMenu extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    language.label,
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                  child: Text(language.label, style: TextStyle(fontSize: 13)),
                 ),
                 if (language == current)
-                  const Icon(
+                  Icon(
                     Icons.check_rounded,
-                    color: AppColors.primary,
+                    color: context.colors.primary,
                     size: 17,
                   ),
               ],
@@ -475,27 +528,27 @@ class _LanguageMenu extends StatelessWidget {
         height: 34,
         padding: const EdgeInsets.symmetric(horizontal: 9),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: context.colors.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: context.colors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.language_rounded,
               size: 15,
-              color: AppColors.secondary,
+              color: context.colors.secondary,
             ),
             const SizedBox(width: 5),
             Text(
               current.label,
-              style: const TextStyle(color: AppColors.secondary, fontSize: 11),
+              style: TextStyle(color: context.colors.secondary, fontSize: 11),
             ),
-            const Icon(
+            Icon(
               Icons.expand_more_rounded,
               size: 16,
-              color: AppColors.muted,
+              color: context.colors.muted,
             ),
           ],
         ),
@@ -550,29 +603,31 @@ class _AuthField extends StatelessWidget {
       controller: controller,
       enabled: enabled,
       keyboardType: keyboardType,
-      keyboardAppearance: Brightness.dark,
+      keyboardAppearance: Theme.of(context).brightness,
       textInputAction: textInputAction,
       textCapitalization: textCapitalization,
       autofillHints: autofillHints,
       autocorrect: false,
       enableSuggestions: enableSuggestions,
       obscureText: obscureText,
-      style: const TextStyle(color: AppColors.text, fontSize: 14),
+      style: TextStyle(color: context.colors.text, fontSize: 14),
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
       validator: validator,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
+        hintStyle: TextStyle(color: context.colors.muted, fontSize: 13),
         prefixIcon: Icon(icon, size: 19),
         prefixIconConstraints: const BoxConstraints(
           minWidth: 42,
           minHeight: 44,
         ),
         prefixIconColor: WidgetStateColor.resolveWith((states) {
-          if (states.contains(WidgetState.error)) return AppColors.red;
-          if (states.contains(WidgetState.focused)) return AppColors.primary;
-          return AppColors.secondary;
+          if (states.contains(WidgetState.error)) return context.colors.red;
+          if (states.contains(WidgetState.focused)) {
+            return context.colors.primary;
+          }
+          return context.colors.secondary;
         }),
         suffixIcon: suffixIcon,
         suffixIconConstraints: const BoxConstraints(
@@ -580,19 +635,19 @@ class _AuthField extends StatelessWidget {
           minHeight: 44,
         ),
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: context.colors.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
-        border: border(AppColors.border),
-        enabledBorder: border(AppColors.border),
-        disabledBorder: border(AppColors.border.withValues(alpha: 0.6)),
-        focusedBorder: border(AppColors.primary, 1.2),
-        errorBorder: border(AppColors.red.withValues(alpha: 0.7)),
-        focusedErrorBorder: border(AppColors.red, 1.2),
-        errorStyle: const TextStyle(
-          color: AppColors.red,
+        border: border(context.colors.border),
+        enabledBorder: border(context.colors.border),
+        disabledBorder: border(context.colors.border.withValues(alpha: 0.6)),
+        focusedBorder: border(context.colors.primary, 1.2),
+        errorBorder: border(context.colors.red.withValues(alpha: 0.7)),
+        focusedErrorBorder: border(context.colors.red, 1.2),
+        errorStyle: TextStyle(
+          color: context.colors.red,
           fontSize: 11,
           height: 1.35,
         ),
@@ -631,18 +686,15 @@ class _SocialButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: busy ? null : onPressed,
           style: OutlinedButton.styleFrom(
-            backgroundColor: AppColors.surfaceRaised,
-            foregroundColor: AppColors.text,
-            disabledForegroundColor: AppColors.secondary,
-            disabledBackgroundColor: AppColors.surfaceRaised,
-            side: const BorderSide(color: AppColors.border),
+            backgroundColor: context.colors.surfaceRaised,
+            foregroundColor: context.colors.text,
+            disabledForegroundColor: context.colors.secondary,
+            disabledBackgroundColor: context.colors.surfaceRaised,
+            side: BorderSide(color: context.colors.border),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            textStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            textStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -675,18 +727,18 @@ class _ErrorMessage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.red.withValues(alpha: 0.07),
+        color: context.colors.red.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.red.withValues(alpha: 0.18)),
+        border: Border.all(color: context.colors.red.withValues(alpha: 0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
             child: Icon(
               Icons.error_outline_rounded,
-              color: AppColors.red,
+              color: context.colors.red,
               size: 16,
             ),
           ),
@@ -694,8 +746,8 @@ class _ErrorMessage extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: AppColors.red,
+              style: TextStyle(
+                color: context.colors.red,
                 fontSize: 11,
                 height: 1.5,
               ),

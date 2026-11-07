@@ -9,10 +9,16 @@ import 'error_code_page.dart';
 import 'scan_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.api, required this.user});
+  const HomePage({
+    super.key,
+    required this.api,
+    required this.user,
+    required this.onProfileTap,
+  });
 
   final ApiClient api;
   final AuthUser user;
+  final VoidCallback onProfileTap;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -64,10 +70,10 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'SnapFix',
                           style: TextStyle(
-                            color: AppColors.text,
+                            color: context.colors.text,
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
@@ -75,8 +81,8 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Text(
                           context.tr('随手修'),
-                          style: const TextStyle(
-                            color: AppColors.secondary,
+                          style: TextStyle(
+                            color: context.colors.secondary,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             letterSpacing: 1.5,
@@ -85,23 +91,41 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.22),
-                      ),
-                    ),
-                    child: Text(
-                      widget.user.initials,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                  Semantics(
+                    label: context.tr('打开个人资料'),
+                    button: true,
+                    child: InkWell(
+                      onTap: widget.onProfileTap,
+                      customBorder: const CircleBorder(),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: context.colors.primary.withValues(
+                                alpha: 0.12,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: context.colors.primary.withValues(
+                                  alpha: 0.22,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              widget.user.initials,
+                              style: TextStyle(
+                                color: context.colors.primary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -114,8 +138,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 34),
               Text(
                 context.tr('你好，{name}', {'name': widget.user.name}),
-                style: const TextStyle(
-                  color: AppColors.primary,
+                style: TextStyle(
+                  color: context.colors.primary,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
@@ -124,8 +148,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
               Text(
                 context.tr('今天想修什么？'),
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: context.colors.text,
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
                   height: 1.18,
@@ -135,8 +159,8 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               Text(
                 context.tr('拍照识别设备与错误码，\n获取带手册来源的维修建议。'),
-                style: const TextStyle(
-                  color: AppColors.secondary,
+                style: TextStyle(
+                  color: context.colors.secondary,
                   fontSize: 14,
                   height: 1.65,
                 ),
@@ -145,7 +169,7 @@ class _HomePageState extends State<HomePage> {
               _ScanHero(online: !_offline, onTap: _openScan),
               const SizedBox(height: 14),
               Material(
-                color: AppColors.surface,
+                color: context.colors.surface,
                 borderRadius: BorderRadius.circular(22),
                 child: InkWell(
                   onTap: _openErrorCode,
@@ -154,7 +178,7 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: context.colors.border),
                     ),
                     child: Row(
                       children: [
@@ -162,12 +186,14 @@ class _HomePageState extends State<HomePage> {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.08),
+                            color: context.colors.accent.withValues(
+                              alpha: 0.08,
+                            ),
                             borderRadius: BorderRadius.circular(15),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.tag_rounded,
-                            color: AppColors.accent,
+                            color: context.colors.accent,
                             size: 23,
                           ),
                         ),
@@ -178,8 +204,8 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               Text(
                                 context.tr('有错误码？直接查'),
-                                style: const TextStyle(
-                                  color: AppColors.text,
+                                style: TextStyle(
+                                  color: context.colors.text,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -187,17 +213,17 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(height: 4),
                               Text(
                                 context.tr('跳过拍照，检索官方手册'),
-                                style: const TextStyle(
-                                  color: AppColors.secondary,
+                                style: TextStyle(
+                                  color: context.colors.secondary,
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(
+                        Icon(
                           Icons.arrow_forward_ios_rounded,
-                          color: AppColors.muted,
+                          color: context.colors.muted,
                           size: 15,
                         ),
                       ],
@@ -252,18 +278,14 @@ class _ScanHero extends StatelessWidget {
         child: Ink(
           height: 282,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF211C38), Color(0xFF111D27)],
-            ),
+            gradient: context.colors.heroGradient,
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.25),
+              color: context.colors.primary.withValues(alpha: 0.25),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: context.colors.primary.withValues(alpha: 0.08),
                 blurRadius: 40,
                 offset: const Offset(0, 18),
               ),
@@ -289,14 +311,16 @@ class _ScanHero extends StatelessWidget {
                       height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: online ? AppColors.green : AppColors.red,
+                        color: online
+                            ? context.colors.green
+                            : context.colors.red,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       context.tr(online ? '已就绪' : '离线'),
-                      style: const TextStyle(
-                        color: AppColors.secondary,
+                      style: TextStyle(
+                        color: context.colors.secondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -322,8 +346,8 @@ class _ScanHero extends StatelessWidget {
                         children: [
                           Text(
                             context.tr('拍摄故障部位'),
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: context.colors.text,
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                             ),
@@ -331,8 +355,8 @@ class _ScanHero extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             context.tr('拍照或从相册选择'),
-                            style: const TextStyle(
-                              color: AppColors.secondary,
+                            style: TextStyle(
+                              color: context.colors.secondary,
                               fontSize: 12,
                             ),
                           ),
@@ -346,9 +370,9 @@ class _ScanHero extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Colors.white,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_outward_rounded,
-                        color: AppColors.background,
+                        color: context.colors.primaryDark,
                         size: 21,
                       ),
                     ),
@@ -374,13 +398,13 @@ class _TrustItem extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: AppColors.muted, size: 16),
+        Icon(icon, color: context.colors.muted, size: 16),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             context.tr(label),
-            style: const TextStyle(
-              color: AppColors.secondary,
+            style: TextStyle(
+              color: context.colors.secondary,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -401,18 +425,18 @@ class _OfflineBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.red.withValues(alpha: 0.08),
+        color: context.colors.red.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.red.withValues(alpha: 0.25)),
+        border: Border.all(color: context.colors.red.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off_outlined, color: AppColors.red, size: 20),
+          Icon(Icons.cloud_off_outlined, color: context.colors.red, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               context.tr('诊断服务未连接'),
-              style: const TextStyle(color: AppColors.text, fontSize: 13),
+              style: TextStyle(color: context.colors.text, fontSize: 13),
             ),
           ),
           TextButton(onPressed: onRetry, child: Text(context.tr('重试'))),

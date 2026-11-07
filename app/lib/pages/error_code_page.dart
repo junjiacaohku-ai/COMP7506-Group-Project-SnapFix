@@ -65,14 +65,14 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     child: AppPill(
                       label: context.tr('官方手册检索'),
                       icon: Icons.menu_book_outlined,
-                      color: AppColors.accent,
+                      color: context.colors.accent,
                     ),
                   ),
                   const SizedBox(height: 18),
                   Text(
                     context.tr('错误码，直接查。'),
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 29,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.8,
@@ -81,8 +81,8 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                   const SizedBox(height: 9),
                   Text(
                     context.tr('输入设备品牌和显示屏上的代码，\n无需拍照也能找到对应维修指引。'),
-                    style: const TextStyle(
-                      color: AppColors.secondary,
+                    style: TextStyle(
+                      color: context.colors.secondary,
                       fontSize: 14,
                       height: 1.6,
                     ),
@@ -91,11 +91,11 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                   TextFormField(
                     controller: _brandController,
                     textInputAction: TextInputAction.next,
-                    style: const TextStyle(color: AppColors.text, fontSize: 16),
+                    style: TextStyle(color: context.colors.text, fontSize: 16),
                     decoration: InputDecoration(
                       labelText: context.tr('设备品牌'),
                       hintText: context.tr('例如 Bosch'),
-                      prefixIcon: const Icon(Icons.factory_outlined),
+                      prefixIcon: Icon(Icons.factory_outlined),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? context.tr('请输入设备品牌')
@@ -106,8 +106,8 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     controller: _codeController,
                     textInputAction: TextInputAction.done,
                     textCapitalization: TextCapitalization.characters,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -115,7 +115,7 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     decoration: InputDecoration(
                       labelText: context.tr('错误码'),
                       hintText: context.tr('例如 E24'),
-                      prefixIcon: const Icon(Icons.tag_rounded),
+                      prefixIcon: Icon(Icons.tag_rounded),
                     ),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? context.tr('请输入错误码')
@@ -132,17 +132,17 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.verified_outlined,
-                        color: AppColors.muted,
+                        color: context.colors.muted,
                         size: 16,
                       ),
                       const SizedBox(width: 7),
                       Flexible(
                         child: Text(
                           context.tr('结果附手册来源，方便核对与报修'),
-                          style: const TextStyle(
-                            color: AppColors.secondary,
+                          style: TextStyle(
+                            color: context.colors.secondary,
                             fontSize: 12,
                           ),
                         ),

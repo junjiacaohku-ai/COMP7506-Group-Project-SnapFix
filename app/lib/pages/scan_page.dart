@@ -86,8 +86,8 @@ class _ScanPageState extends State<ScanPage> {
         const SizedBox(height: 18),
         Text(
           context.tr('对准故障，拍清楚'),
-          style: const TextStyle(
-            color: AppColors.text,
+          style: TextStyle(
+            color: context.colors.text,
             fontSize: 29,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.8,
@@ -96,8 +96,8 @@ class _ScanPageState extends State<ScanPage> {
         const SizedBox(height: 9),
         Text(
           context.tr('对准设备铭牌、错误码或故障部位，\n清晰的照片能让诊断更准确。'),
-          style: const TextStyle(
-            color: AppColors.secondary,
+          style: TextStyle(
+            color: context.colors.secondary,
             fontSize: 14,
             height: 1.6,
           ),
@@ -106,9 +106,9 @@ class _ScanPageState extends State<ScanPage> {
         Container(
           height: 286,
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.75),
+            color: context.colors.surface.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: context.colors.border),
           ),
           child: Stack(
             children: [
@@ -120,8 +120,8 @@ class _ScanPageState extends State<ScanPage> {
                 child: Text(
                   context.tr('一个镜头，读懂设备状态'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: TextStyle(
+                    color: context.colors.secondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -194,7 +194,7 @@ class _ScanPageState extends State<ScanPage> {
                   child: AppPill(
                     label: context.tr('照片已就绪'),
                     icon: Icons.check_circle_outline_rounded,
-                    color: AppColors.green,
+                    color: context.colors.green,
                     backgroundColor: const Color(0xCC12151D),
                   ),
                 ),
@@ -207,7 +207,7 @@ class _ScanPageState extends State<ScanPage> {
                     children: [
                       Text(
                         context.tr('这张照片看起来不错'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
@@ -216,7 +216,7 @@ class _ScanPageState extends State<ScanPage> {
                       const SizedBox(height: 5),
                       Text(
                         context.tr('AI 将识别设备、错误码与可见故障'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Color(0xFFD4D7E0),
                           fontSize: 13,
                         ),
@@ -255,11 +255,11 @@ class _CaptureTip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: AppColors.muted, size: 19),
+        Icon(icon, color: context.colors.muted, size: 19),
         const SizedBox(height: 7),
         Text(
           context.tr(label),
-          style: const TextStyle(color: AppColors.secondary, fontSize: 11),
+          style: TextStyle(color: context.colors.secondary, fontSize: 11),
         ),
       ],
     );

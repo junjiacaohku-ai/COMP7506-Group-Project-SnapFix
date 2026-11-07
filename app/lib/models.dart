@@ -149,29 +149,23 @@ IconData deviceCategoryIcon(String category) => switch (category) {
   _ => Icons.devices_other_outlined,
 };
 
-({String label, Color color, IconData icon}) decisionStyle(String decision) =>
-    switch (decision) {
-      'diy' => (
-        label: '适合自己修',
-        color: AppColors.green,
-        icon: Icons.handyman_outlined,
-      ),
-      'landlord' => (
-        label: '建议找房东',
-        color: AppColors.amber,
-        icon: Icons.home_outlined,
-      ),
-      'professional' => (
-        label: '必须找师傅',
-        color: AppColors.red,
-        icon: Icons.engineering_outlined,
-      ),
-      _ => (
-        label: '安全拒答',
-        color: AppColors.red,
-        icon: Icons.gpp_maybe_outlined,
-      ),
-    };
+({String label, Color color, IconData icon}) decisionStyle(
+  String decision,
+  AppPalette colors,
+) => switch (decision) {
+  'diy' => (label: '适合自己修', color: colors.green, icon: Icons.handyman_outlined),
+  'landlord' => (
+    label: '建议找房东',
+    color: colors.amber,
+    icon: Icons.home_outlined,
+  ),
+  'professional' => (
+    label: '必须找师傅',
+    color: colors.red,
+    icon: Icons.engineering_outlined,
+  ),
+  _ => (label: '安全拒答', color: colors.red, icon: Icons.gpp_maybe_outlined),
+};
 
 String formatDateTime(DateTime t) {
   String two(int v) => v.toString().padLeft(2, '0');

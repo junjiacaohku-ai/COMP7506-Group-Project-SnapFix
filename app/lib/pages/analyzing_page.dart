@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../l10n.dart';
 import '../models.dart';
+import '../settings.dart';
 import '../theme.dart';
 import '../ui.dart';
 import 'result_page.dart';
@@ -23,6 +24,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
     with TickerProviderStateMixin {
   late final AnimationController _spin;
   late final AnimationController _pulse;
+  bool? _animationsReduced;
 
   @override
   void initState() {
@@ -30,14 +32,31 @@ class _AnalyzingPageState extends State<AnalyzingPage>
     _spin = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat();
+    );
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
       lowerBound: 0.9,
       upperBound: 1.0,
-    )..repeat(reverse: true);
+      value: 1,
+    );
     _run();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduced = context.reduceMotion;
+    if (_animationsReduced == reduced) return;
+    _animationsReduced = reduced;
+    if (reduced) {
+      _spin.stop();
+      _pulse.stop();
+      _pulse.value = 1;
+    } else {
+      _spin.repeat();
+      _pulse.repeat(reverse: true);
+    }
   }
 
   @override
@@ -73,9 +92,9 @@ class _AnalyzingPageState extends State<AnalyzingPage>
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        icon: const Icon(
+        icon: Icon(
           Icons.no_photography_outlined,
-          color: AppColors.primary,
+          color: context.colors.primary,
           size: 38,
         ),
         title: Text(context.tr('照片还不够清晰')),
@@ -106,14 +125,14 @@ class _AnalyzingPageState extends State<AnalyzingPage>
               padding: const EdgeInsets.fromLTRB(24, 18, 24, 26),
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       BrandMark(size: 34),
                       SizedBox(width: 10),
                       Text(
                         'SNAPFIX',
                         style: TextStyle(
-                          color: AppColors.secondary,
+                          color: context.colors.secondary,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.8,
@@ -126,8 +145,8 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                   const SizedBox(height: 28),
                   Text(
                     context.tr('正在生成诊断'),
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 27,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.7,
@@ -137,8 +156,8 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                   Text(
                     context.tr('设备识别、手册检索与安全评估正在处理中'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.secondary,
+                    style: TextStyle(
+                      color: context.colors.secondary,
                       fontSize: 13,
                       height: 1.55,
                     ),
@@ -146,10 +165,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                   const SizedBox(height: 7),
                   Text(
                     context.tr('耗时取决于照片与网络状况'),
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: context.colors.muted, fontSize: 11),
                   ),
                   const Spacer(),
                   const SurfaceCard(
@@ -202,8 +218,8 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withValues(alpha: 0.18),
-                    AppColors.primary.withValues(alpha: 0),
+                    context.colors.primary.withValues(alpha: 0.18),
+                    context.colors.primary.withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -211,28 +227,28 @@ class _AnalyzingPageState extends State<AnalyzingPage>
           ),
           RotationTransition(
             turns: _spin,
-            child: const SizedBox(
+            child: SizedBox(
               width: 184,
               height: 184,
               child: CircularProgressIndicator(
                 value: 0.78,
                 strokeWidth: 2.8,
                 strokeCap: StrokeCap.round,
-                color: AppColors.primary,
+                color: context.colors.primary,
                 backgroundColor: Color(0x33A895FF),
               ),
             ),
           ),
           RotationTransition(
             turns: ReverseAnimation(_spin),
-            child: const SizedBox(
+            child: SizedBox(
               width: 148,
               height: 148,
               child: CircularProgressIndicator(
                 value: 0.24,
                 strokeWidth: 1.8,
                 strokeCap: StrokeCap.round,
-                color: AppColors.accent,
+                color: context.colors.accent,
                 backgroundColor: Colors.transparent,
               ),
             ),
@@ -241,16 +257,16 @@ class _AnalyzingPageState extends State<AnalyzingPage>
             width: 104,
             height: 104,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: context.colors.primaryGradient,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
+                  color: context.colors.primary.withValues(alpha: 0.25),
                   blurRadius: 36,
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.document_scanner_outlined,
               size: 42,
               color: Colors.white,
@@ -281,10 +297,10 @@ class _ProcessRow extends StatelessWidget {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: context.colors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 19),
+          child: Icon(icon, color: context.colors.primary, size: 19),
         ),
         const SizedBox(width: 13),
         Expanded(
@@ -293,8 +309,8 @@ class _ProcessRow extends StatelessWidget {
             children: [
               Text(
                 context.tr(label),
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: context.colors.text,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -302,10 +318,7 @@ class _ProcessRow extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 context.tr(description),
-                style: const TextStyle(
-                  color: AppColors.secondary,
-                  fontSize: 11,
-                ),
+                style: TextStyle(color: context.colors.secondary, fontSize: 11),
               ),
             ],
           ),

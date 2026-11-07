@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../api.dart';
 import '../l10n.dart';
 import '../models.dart';
+import '../settings.dart';
 import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
@@ -54,7 +55,7 @@ class _ResultPageState extends State<ResultPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.colors.surface,
       builder: (_) => ReportSheet(api: widget.api, sessionId: _session.id),
     );
   }
@@ -93,8 +94,8 @@ class _ResultPageState extends State<ResultPage> {
                 Expanded(
                   child: Text(
                     context.tr('维修计划'),
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 23,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
@@ -111,7 +112,7 @@ class _ResultPageState extends State<ResultPage> {
             const SizedBox(height: 7),
             Text(
               context.tr('按顺序操作，可以随时标记完成进度'),
-              style: const TextStyle(color: AppColors.secondary, fontSize: 12),
+              style: TextStyle(color: context.colors.secondary, fontSize: 12),
             ),
             const SizedBox(height: 18),
             for (var i = 0; i < _session.steps.length; i++)
@@ -150,14 +151,14 @@ class _ResultPageState extends State<ResultPage> {
                   height: 104,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.red.withValues(alpha: 0.09),
+                    color: context.colors.red.withValues(alpha: 0.09),
                     border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.25),
+                      color: context.colors.red.withValues(alpha: 0.25),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.gpp_maybe_outlined,
-                    color: AppColors.red,
+                    color: context.colors.red,
                     size: 54,
                   ),
                 ),
@@ -165,14 +166,14 @@ class _ResultPageState extends State<ResultPage> {
                 AppPill(
                   label: context.tr('安全保护已触发'),
                   icon: Icons.shield_outlined,
-                  color: AppColors.red,
+                  color: context.colors.red,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   context.tr('这项维修不适合\n自行操作'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: context.colors.text,
                     fontSize: 29,
                     fontWeight: FontWeight.w800,
                     height: 1.25,
@@ -184,16 +185,16 @@ class _ResultPageState extends State<ResultPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColors.red.withValues(alpha: 0.06),
+                    color: context.colors.red.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.24),
+                      color: context.colors.red.withValues(alpha: 0.24),
                     ),
                   ),
                   child: Text(
                     _session.decisionReason,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: context.colors.text,
                       fontSize: 15,
                       height: 1.7,
                     ),
@@ -203,8 +204,8 @@ class _ResultPageState extends State<ResultPage> {
                 Text(
                   context.tr('为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: TextStyle(
+                    color: context.colors.secondary,
                     fontSize: 12,
                     height: 1.6,
                   ),
@@ -213,10 +214,10 @@ class _ResultPageState extends State<ResultPage> {
                 FilledButton.icon(
                   onPressed: () => Navigator.of(context).pop(),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.red,
+                    backgroundColor: context.colors.red,
                     foregroundColor: Colors.white,
                   ),
-                  icon: const Icon(Icons.engineering_outlined, size: 22),
+                  icon: Icon(Icons.engineering_outlined, size: 22),
                   label: Text(context.tr('返回并寻求专业帮助')),
                 ),
               ],
@@ -251,15 +252,15 @@ class _DeviceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.2),
-                      AppColors.accent.withValues(alpha: 0.08),
+                      context.colors.primary.withValues(alpha: 0.2),
+                      context.colors.accent.withValues(alpha: 0.08),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Icon(
                   deviceCategoryIcon(session.deviceCategory),
-                  color: AppColors.primary,
+                  color: context.colors.primary,
                   size: 28,
                 ),
               ),
@@ -270,8 +271,8 @@ class _DeviceCard extends StatelessWidget {
                   children: [
                     Text(
                       context.tr('识别结果'),
-                      style: const TextStyle(
-                        color: AppColors.secondary,
+                      style: TextStyle(
+                        color: context.colors.secondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -279,8 +280,8 @@ class _DeviceCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       context.tr(deviceCategoryLabel(session.deviceCategory)),
-                      style: const TextStyle(
-                        color: AppColors.text,
+                      style: TextStyle(
+                        color: context.colors.text,
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                       ),
@@ -291,7 +292,7 @@ class _DeviceCard extends StatelessWidget {
               AppPill(
                 label: context.tr('诊断完成'),
                 icon: Icons.check_circle_outline_rounded,
-                color: AppColors.green,
+                color: context.colors.green,
               ),
             ],
           ),
@@ -302,7 +303,7 @@ class _DeviceCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.background.withValues(alpha: 0.65),
+                color: context.colors.background.withValues(alpha: 0.65),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Row(
@@ -310,8 +311,8 @@ class _DeviceCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       brandModel.isEmpty ? context.tr('设备型号未识别') : brandModel,
-                      style: const TextStyle(
-                        color: AppColors.text,
+                      style: TextStyle(
+                        color: context.colors.text,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -320,8 +321,8 @@ class _DeviceCard extends StatelessWidget {
                   if (session.errorCode?.isNotEmpty == true)
                     Text(
                       session.errorCode!,
-                      style: const TextStyle(
-                        color: AppColors.accent,
+                      style: TextStyle(
+                        color: context.colors.accent,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -336,7 +337,7 @@ class _DeviceCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               formatDateTime(session.createdAt),
-              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+              style: TextStyle(color: context.colors.muted, fontSize: 11),
             ),
           ),
         ],
@@ -352,7 +353,7 @@ class _DecisionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = decisionStyle(session.decision);
+    final style = decisionStyle(session.decision, context.colors);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -360,7 +361,7 @@ class _DecisionCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [style.color.withValues(alpha: 0.13), AppColors.surface],
+          colors: [style.color.withValues(alpha: 0.13), context.colors.surface],
         ),
         borderRadius: BorderRadius.circular(26),
         border: Border.all(color: style.color.withValues(alpha: 0.25)),
@@ -385,8 +386,8 @@ class _DecisionCard extends StatelessWidget {
                 children: [
                   Text(
                     context.tr('维修建议'),
-                    style: const TextStyle(
-                      color: AppColors.secondary,
+                    style: TextStyle(
+                      color: context.colors.secondary,
                       fontSize: 11,
                     ),
                   ),
@@ -407,8 +408,8 @@ class _DecisionCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               session.decisionReason,
-              style: const TextStyle(
-                color: AppColors.text,
+              style: TextStyle(
+                color: context.colors.text,
                 fontSize: 14,
                 height: 1.65,
               ),
@@ -426,8 +427,8 @@ class _DecisionCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   context.tr('已结合设备状态与安全规则'),
-                  style: const TextStyle(
-                    color: AppColors.secondary,
+                  style: TextStyle(
+                    color: context.colors.secondary,
                     fontSize: 11,
                   ),
                 ),
@@ -463,29 +464,31 @@ class _StepCard extends StatelessWidget {
           Column(
             children: [
               AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
+                duration: context.reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 220),
                 width: 34,
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: done
-                      ? AppColors.green
-                      : AppColors.primary.withValues(alpha: 0.12),
+                      ? context.colors.green
+                      : context.colors.primary.withValues(alpha: 0.12),
                   border: Border.all(
-                    color: done ? AppColors.green : AppColors.primary,
+                    color: done ? context.colors.green : context.colors.primary,
                   ),
                 ),
                 child: done
-                    ? const Icon(
+                    ? Icon(
                         Icons.check_rounded,
                         size: 18,
-                        color: AppColors.background,
+                        color: context.colors.background,
                       )
                     : Text(
                         '${step.idx}',
-                        style: const TextStyle(
-                          color: AppColors.primary,
+                        style: TextStyle(
+                          color: context.colors.primary,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                         ),
@@ -497,8 +500,8 @@ class _StepCard extends StatelessWidget {
                     width: 1.5,
                     margin: const EdgeInsets.symmetric(vertical: 7),
                     color: done
-                        ? AppColors.green.withValues(alpha: 0.35)
-                        : AppColors.border,
+                        ? context.colors.green.withValues(alpha: 0.35)
+                        : context.colors.border,
                   ),
                 ),
             ],
@@ -508,17 +511,19 @@ class _StepCard extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
+                duration: context.reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 220),
                 padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
                   color: done
-                      ? AppColors.green.withValues(alpha: 0.045)
-                      : AppColors.surface,
+                      ? context.colors.green.withValues(alpha: 0.045)
+                      : context.colors.surface,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(
                     color: done
-                        ? AppColors.green.withValues(alpha: 0.3)
-                        : AppColors.border,
+                        ? context.colors.green.withValues(alpha: 0.3)
+                        : context.colors.border,
                   ),
                 ),
                 child: Column(
@@ -526,8 +531,8 @@ class _StepCard extends StatelessWidget {
                   children: [
                     Text(
                       step.content,
-                      style: const TextStyle(
-                        color: AppColors.text,
+                      style: TextStyle(
+                        color: context.colors.text,
                         fontSize: 15,
                         height: 1.65,
                       ),
@@ -547,7 +552,7 @@ class _StepCard extends StatelessWidget {
                           icon: Icons.check_rounded,
                           label: '完成',
                           selected: step.feedback == 'done',
-                          selectedColor: AppColors.green,
+                          selectedColor: context.colors.green,
                           enabled: !busy,
                           onTap: () => onFeedback('done'),
                         ),
@@ -556,7 +561,7 @@ class _StepCard extends StatelessWidget {
                           icon: Icons.arrow_forward_rounded,
                           label: '跳过',
                           selected: step.feedback == 'skipped',
-                          selectedColor: AppColors.secondary,
+                          selectedColor: context.colors.secondary,
                           enabled: !busy,
                           onTap: () => onFeedback('skipped'),
                         ),
@@ -565,7 +570,7 @@ class _StepCard extends StatelessWidget {
                           icon: Icons.close_rounded,
                           label: '没用',
                           selected: step.feedback == 'not_useful',
-                          selectedColor: AppColors.red,
+                          selectedColor: context.colors.red,
                           enabled: !busy,
                           onTap: () => onFeedback('not_useful'),
                         ),
@@ -593,22 +598,22 @@ class _Citation extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
+        color: context.colors.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.menu_book_outlined,
             size: 15,
-            color: AppColors.primary,
+            color: context.colors.primary,
           ),
           const SizedBox(width: 7),
           Expanded(
             child: Text(
               '$manual${section.isEmpty ? '' : ' · $section'}',
-              style: const TextStyle(
-                color: AppColors.primary,
+              style: TextStyle(
+                color: context.colors.primary,
                 fontSize: 11,
                 height: 1.4,
               ),
@@ -643,13 +648,15 @@ class _FeedbackButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       onTap: enabled ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: context.reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: selected
               ? selectedColor.withValues(alpha: 0.13)
-              : AppColors.surfaceRaised,
+              : context.colors.surfaceRaised,
           border: Border.all(
             color: selected ? selectedColor : Colors.transparent,
           ),
@@ -659,13 +666,13 @@ class _FeedbackButton extends StatelessWidget {
             Icon(
               icon,
               size: 13,
-              color: selected ? selectedColor : AppColors.secondary,
+              color: selected ? selectedColor : context.colors.secondary,
             ),
             const SizedBox(width: 4),
             Text(
               context.tr(label),
               style: TextStyle(
-                color: selected ? selectedColor : AppColors.secondary,
+                color: selected ? selectedColor : context.colors.secondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
@@ -700,7 +707,7 @@ class ReportSheet extends StatelessWidget {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.border,
+                  color: context.colors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -714,8 +721,8 @@ class ReportSheet extends StatelessWidget {
                         children: [
                           Text(
                             context.tr('报修信息'),
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: context.colors.text,
                               fontSize: 21,
                               fontWeight: FontWeight.w800,
                             ),
@@ -723,8 +730,8 @@ class ReportSheet extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             context.tr('一键复制给房东或维修师傅'),
-                            style: const TextStyle(
-                              color: AppColors.secondary,
+                            style: TextStyle(
+                              color: context.colors.secondary,
                               fontSize: 12,
                             ),
                           ),
@@ -733,8 +740,8 @@ class ReportSheet extends StatelessWidget {
                     ),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                      color: AppColors.secondary,
+                      icon: Icon(Icons.close_rounded),
+                      color: context.colors.secondary,
                     ),
                   ],
                 ),
@@ -744,18 +751,18 @@ class ReportSheet extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: context.colors.background,
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: TabBar(
-                  labelColor: AppColors.primary,
-                  unselectedLabelColor: AppColors.secondary,
-                  labelStyle: const TextStyle(
+                  labelColor: context.colors.primary,
+                  unselectedLabelColor: context.colors.secondary,
+                  labelStyle: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                   indicator: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.13),
+                    color: context.colors.primary.withValues(alpha: 0.13),
                     borderRadius: BorderRadius.circular(11),
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
@@ -857,7 +864,7 @@ class _ReportPaneState extends State<_ReportPane>
           children: [
             Text(
               context.tr(_error!),
-              style: const TextStyle(color: AppColors.secondary, fontSize: 15),
+              style: TextStyle(color: context.colors.secondary, fontSize: 15),
             ),
             const SizedBox(height: 12),
             TextButton(onPressed: _load, child: Text(context.tr('重试'))),
@@ -884,15 +891,15 @@ class _ReportPaneState extends State<_ReportPane>
               width: double.infinity,
               padding: const EdgeInsets.all(17),
               decoration: BoxDecoration(
-                color: AppColors.background,
+                color: context.colors.background,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: context.colors.border),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
                   content,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: context.colors.text,
                     fontSize: 14,
                     height: 1.7,
                   ),
@@ -909,7 +916,7 @@ class _ReportPaneState extends State<_ReportPane>
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                   ),
-                  icon: const Icon(Icons.copy_outlined, size: 19),
+                  icon: Icon(Icons.copy_outlined, size: 19),
                   label: Text(context.tr('复制')),
                 ),
               ),
@@ -919,12 +926,12 @@ class _ReportPaneState extends State<_ReportPane>
                   onPressed: _share,
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
-                    foregroundColor: AppColors.primary,
+                    foregroundColor: context.colors.primary,
                     side: BorderSide(
-                      color: AppColors.primary.withValues(alpha: 0.45),
+                      color: context.colors.primary.withValues(alpha: 0.45),
                     ),
                   ),
-                  icon: const Icon(Icons.share_outlined, size: 19),
+                  icon: Icon(Icons.share_outlined, size: 19),
                   label: Text(context.tr('分享')),
                 ),
               ),

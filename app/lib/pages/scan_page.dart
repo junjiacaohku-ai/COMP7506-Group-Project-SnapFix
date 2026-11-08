@@ -104,7 +104,7 @@ class _ScanPageState extends State<ScanPage> {
         ),
         const SizedBox(height: 24),
         Container(
-          height: 286,
+          height: 190,
           decoration: BoxDecoration(
             color: context.colors.surface.withValues(alpha: 0.75),
             borderRadius: BorderRadius.circular(30),
@@ -206,7 +206,7 @@ class _ScanPageState extends State<ScanPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        context.tr('这张照片看起来不错'),
+                        context.tr('照片已选择，确认后开始诊断'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -253,13 +253,16 @@ class _CaptureTip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: context.colors.muted, size: 19),
-        const SizedBox(height: 7),
-        Text(
-          context.tr(label),
-          style: TextStyle(color: context.colors.secondary, fontSize: 11),
+        Icon(icon, color: context.colors.muted, size: 17),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            context.tr(label),
+            style: TextStyle(color: context.colors.secondary, fontSize: 10),
+          ),
         ),
       ],
     );

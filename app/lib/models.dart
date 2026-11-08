@@ -59,18 +59,40 @@ class LoginIdentity {
   final DateTime createdAt;
 }
 
+class ManualSection {
+  const ManualSection({required this.section, required this.text});
+
+  factory ManualSection.fromJson(Map<String, dynamic> json) => ManualSection(
+    section: json['section'] as String? ?? '',
+    text: json['text'] as String? ?? '',
+  );
+
+  final String section;
+  final String text;
+}
+
 class ManualInfo {
-  const ManualInfo({required this.title, required this.category, this.brand});
+  const ManualInfo({
+    required this.title,
+    required this.category,
+    required this.sections,
+    this.brand,
+  });
 
   factory ManualInfo.fromJson(Map<String, dynamic> json) => ManualInfo(
     title: json['title'] as String,
     category: json['category'] as String,
     brand: json['brand'] as String?,
+    sections: [
+      for (final section in json['sections'] as List? ?? const [])
+        ManualSection.fromJson(section as Map<String, dynamic>),
+    ],
   );
 
   final String title;
   final String category;
   final String? brand;
+  final List<ManualSection> sections;
 }
 
 class HealthInfo {
@@ -128,8 +150,10 @@ class Session {
     required this.decision,
     required this.decisionReason,
     required this.safetyRefused,
+    required this.diagnosisSource,
     required this.steps,
     required this.createdAt,
+    this.confidence,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -141,6 +165,8 @@ class Session {
     decision: json['decision'] as String? ?? '',
     decisionReason: json['decision_reason'] as String? ?? '',
     safetyRefused: json['safety_refused'] as bool? ?? false,
+    diagnosisSource: json['diagnosis_source'] as String? ?? 'mock',
+    confidence: (json['confidence'] as num?)?.toDouble(),
     steps: [
       for (final s in json['steps'] as List? ?? const [])
         RepairStep.fromJson(s as Map<String, dynamic>),
@@ -158,8 +184,12 @@ class Session {
   final String decision;
   final String decisionReason;
   final bool safetyRefused;
+  final String diagnosisSource;
+  final double? confidence;
   final List<RepairStep> steps;
   final DateTime createdAt;
+
+  bool get isDemo => diagnosisSource != 'gemini';
 }
 
 String deviceCategoryLabel(String category) => switch (category) {
@@ -201,4 +231,19 @@ IconData deviceCategoryIcon(String category) => switch (category) {
 String formatDateTime(DateTime t) {
   String two(int v) => v.toString().padLeft(2, '0');
   return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+}
+
+String formatRelativeDateTime(DateTime t, String languageCode) {
+  final now = DateTime.now();
+  final date = DateTime(t.year, t.month, t.day);
+  final today = DateTime(now.year, now.month, now.day);
+  String two(int v) => v.toString().padLeft(2, '0');
+  final time = '${two(t.hour)}:${two(t.minute)}';
+  if (date == today) {
+    return languageCode == 'zh' ? '今天 $time' : 'Today $time';
+  }
+  if (date == today.subtract(const Duration(days: 1))) {
+    return languageCode == 'zh' ? '昨天 $time' : 'Yesterday $time';
+  }
+  return formatDateTime(t);
 }

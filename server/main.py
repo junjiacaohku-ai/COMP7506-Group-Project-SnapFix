@@ -359,13 +359,13 @@ def step_feedback(
     req: FeedbackRequest,
     user: dict = Depends(current_user),
 ):
-    if req.feedback not in {"done", "not_useful", "skipped"}:
+    if req.feedback not in {"done", "not_useful", "skipped", ""}:
         raise HTTPException(status_code=400, detail="invalid feedback")
     with db.connect() as conn:
         _get(session_id, conn, user["id"])
         cur = conn.execute(
             "UPDATE steps SET feedback=? WHERE id=? AND session_id=?",
-            (req.feedback, step_id, session_id),
+            (req.feedback or None, step_id, session_id),
         )
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="step not found")
@@ -380,35 +380,69 @@ def generate_report(
         raise HTTPException(status_code=400, detail="invalid language")
     with db.connect() as conn:
         s = _get(session_id, conn, user["id"])
-    device = {
-        "washing_machine": "洗衣机",
-        "router": "路由器",
-        "microwave": "微波炉",
-        "ikea_furniture": "IKEA 家具",
-        "water_heater": "热水器",
-    }.get(s["device_category"], s["device_category"])
+    devices = {
+        "washing_machine": ("洗衣机", "Washing machine"),
+        "router": ("路由器", "Router"),
+        "microwave": ("微波炉", "Microwave"),
+        "ikea_furniture": ("IKEA 家具", "IKEA furniture"),
+        "water_heater": ("热水器", "Water heater"),
+    }
+    device = devices.get(
+        s["device_category"], (s["device_category"], s["device_category"])
+    )[0 if req.lang == "zh" else 1]
     brand = s["brand"]
+    model = s["model"]
     code = s["error_code"]
+    high_risk = s["safety_refused"] or s["decision"] == "professional"
+    reason_en = {
+        "Internet 红灯多为接线或拨号问题,非破坏性排查,约 10 分钟。": "WAN cabling or dial-up issue; unconfirmed.",
+        "排水泵滤网堵塞,非破坏性操作,工具只需一枚硬币,约 15 分钟。": "Drain pump filter blockage; unconfirmed.",
+        "板式家具组装,工具只需螺丝刀与锤子,约 40 分钟,两人更佳。": "Flat-pack furniture assembly assistance requested.",
+        "微波炉内部高压电容断电后仍可致命,属于高危类目,不提供任何拆解步骤。": "High-risk microwave fault; no DIY diagnosis provided.",
+        "热水器属房东配置,内部维修责任在房东;可先自行尝试复位键。": "Possible water heater fault requiring landlord inspection.",
+    }.get(s["decision_reason"])
     if req.lang == "en":
         tried = ", ".join(
             f"step {st['idx']}" for st in s["steps"] if st["feedback"] == "done"
         ) or "none"
-        brand_part = f" ({brand})" if brand else ""
-        code_part = f", error code {code}" if code else ""
-        content = (
-            f"Repair request: {s['device_category']}{brand_part}{code_part}. "
-            f"Steps already tried: {tried}. Photos attached. Please advise."
+        lines = ["Repair request", f"Device: {device}"]
+        if brand:
+            lines.append(f"Brand: {brand}")
+        if model:
+            lines.append(f"Model: {model}")
+        lines.append(
+            f"Observed issue: Error code {code} reported by the user."
+            if code else "Observed issue: Appliance fault reported by the user."
         )
+        if reason_en:
+            lines.append(f"Possible cause: {reason_en}")
+        lines.append(f"Steps already tried: {tried}.")
+        if high_risk:
+            lines.append(
+                "Safety note: High-risk appliance. Do not disassemble; "
+                "internal components may remain dangerous after power is disconnected."
+            )
+        lines.append(
+            "Please attach photos of the fault when sending this request. Please advise."
+        )
+        content = "\n".join(lines)
     else:
         tried = "、".join(
             f"步骤{st['idx']}" for st in s["steps"] if st["feedback"] == "done"
         ) or "无"
-        brand_part = f"({brand})" if brand else ""
-        code_part = f",错误码 {code}" if code else ""
-        content = (
-            f"报修申请:{device}{brand_part}{code_part}。"
-            f"已尝试步骤:{tried}。照片见附件,烦请安排处理,谢谢。"
-        )
+        lines = ["报修申请", f"设备:{device}"]
+        if brand:
+            lines.append(f"品牌:{brand}")
+        if model:
+            lines.append(f"型号:{model}")
+        lines.append(f"故障现象:用户报告错误码 {code}。" if code else "故障现象:用户报告设备故障。")
+        if s["decision_reason"]:
+            lines.append(f"可能原因(未经确认):{s['decision_reason']}")
+        lines.append(f"已尝试步骤:{tried}。")
+        if high_risk:
+            lines.append("安全注意:高风险设备,请勿自行拆解;断电后内部元件仍可能存在危险。")
+        lines.append("发送时请另附故障照片,烦请安排处理,谢谢。")
+        content = "\n".join(lines)
     return {"lang": req.lang, "content": content}
 
 

@@ -9,7 +9,6 @@ import 'pages/archive_page.dart';
 import 'pages/auth_page.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
-import 'pages/toolbox_page.dart';
 import 'settings.dart';
 import 'theme.dart';
 import 'ui.dart';
@@ -225,16 +224,14 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  final _toolboxKey = GlobalKey<ToolboxPageState>();
   final _archiveKey = GlobalKey<ArchivePageState>();
   final _profileKey = GlobalKey<ProfilePageState>();
   int _index = 0;
 
   void _selectTab(int index) {
     setState(() => _index = index);
-    if (index == 1) _toolboxKey.currentState?.reload();
-    if (index == 2) _archiveKey.currentState?.reload();
-    if (index == 3) _profileKey.currentState?.reload();
+    if (index == 1) _archiveKey.currentState?.reload();
+    if (index == 2) _profileKey.currentState?.reload();
   }
 
   @override
@@ -246,17 +243,15 @@ class _MainScaffoldState extends State<MainScaffold> {
           HomePage(
             api: widget.api,
             user: widget.auth.user!,
-            onProfileTap: () => _selectTab(3),
-            onHistoryTap: () => _selectTab(2),
-            onToolsTap: () => _selectTab(1),
+            onProfileTap: () => _selectTab(2),
+            onHistoryTap: () => _selectTab(1),
           ),
-          ToolboxPage(key: _toolboxKey, api: widget.api),
           ArchivePage(key: _archiveKey, api: widget.api),
           ProfilePage(
             key: _profileKey,
             api: widget.api,
             auth: widget.auth,
-            onHistoryTap: () => _selectTab(2),
+            onHistoryTap: () => _selectTab(1),
           ),
         ],
       ),
@@ -287,25 +282,18 @@ class _MainScaffoldState extends State<MainScaffold> {
                 onTap: () => _selectTab(0),
               ),
               _NavItem(
-                icon: Icons.handyman_outlined,
-                selectedIcon: Icons.handyman_rounded,
-                label: context.tr('工具箱'),
-                selected: _index == 1,
-                onTap: () => _selectTab(1),
-              ),
-              _NavItem(
                 icon: Icons.inventory_2_outlined,
                 selectedIcon: Icons.inventory_2_rounded,
                 label: context.tr('档案'),
-                selected: _index == 2,
-                onTap: () => _selectTab(2),
+                selected: _index == 1,
+                onTap: () => _selectTab(1),
               ),
               _NavItem(
                 icon: Icons.person_outline_rounded,
                 selectedIcon: Icons.person_rounded,
                 label: context.tr('我的'),
-                selected: _index == 3,
-                onTap: () => _selectTab(3),
+                selected: _index == 2,
+                onTap: () => _selectTab(2),
               ),
             ],
           ),

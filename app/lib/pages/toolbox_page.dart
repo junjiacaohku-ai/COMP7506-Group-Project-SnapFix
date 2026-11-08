@@ -6,7 +6,6 @@ import '../models.dart';
 import '../theme.dart';
 import '../ui.dart';
 import 'error_code_page.dart';
-import 'scan_page.dart';
 
 class ToolboxPage extends StatefulWidget {
   const ToolboxPage({super.key, required this.api});
@@ -20,6 +19,7 @@ class ToolboxPage extends StatefulWidget {
 class ToolboxPageState extends State<ToolboxPage> {
   List<ManualInfo>? _manuals;
   String? _error;
+  String _query = '';
 
   @override
   void initState() {
@@ -38,15 +38,6 @@ class ToolboxPageState extends State<ToolboxPage> {
     } catch (_) {
       if (mounted) setState(() => _error = '手册库暂时无法加载');
     }
-  }
-
-  void _openScan() {
-    Navigator.of(context).push(AppPageRoute(child: ScanPage(api: widget.api)));
-  }
-
-  void _openErrorCode() {
-    Navigator.of(context)
-        .push(AppPageRoute(child: ErrorCodePage(api: widget.api)));
   }
 
   void _showSafetyGuide() {
@@ -78,56 +69,106 @@ class ToolboxPageState extends State<ToolboxPage> {
   void _openManual(ManualInfo manual) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.menu_book_outlined,
-                color: sheetContext.colors.primary,
-                size: 30,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                manual.title,
-                style: TextStyle(
-                  color: sheetContext.colors.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  height: 1.35,
+        child: SizedBox(
+          height: MediaQuery.of(sheetContext).size.height * 0.78,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.menu_book_outlined,
+                  color: sheetContext.colors.primary,
+                  size: 30,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${manual.brand ?? ''} · ${sheetContext.tr(deviceCategoryLabel(manual.category))}',
-                style: TextStyle(
-                  color: sheetContext.colors.secondary,
-                  fontSize: 13,
+                const SizedBox(height: 14),
+                Text(
+                  manual.title,
+                  style: TextStyle(
+                    color: sheetContext.colors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                sheetContext.tr('输入品牌和错误码，即可检索这本手册中的相关章节与安全提示。'),
-                style: TextStyle(
-                  color: sheetContext.colors.secondary,
-                  fontSize: 13,
-                  height: 1.5,
+                const SizedBox(height: 8),
+                Text(
+                  '${manual.brand ?? ''} · ${sheetContext.tr(deviceCategoryLabel(manual.category))}',
+                  style: TextStyle(
+                    color: sheetContext.colors.secondary,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              GradientButton(
-                label: '查询相关维修指引',
-                icon: Icons.manage_search_rounded,
-                height: 50,
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  _openErrorCode();
-                },
-              ),
-            ],
+                const SizedBox(height: 18),
+                Text(
+                  sheetContext.tr('来源章节与原文摘要'),
+                  style: TextStyle(
+                    color: sheetContext.colors.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: manual.sections.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (_, index) {
+                      final section = manual.sections[index];
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: sheetContext.colors.background,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: sheetContext.colors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              section.section,
+                              style: TextStyle(
+                                color: sheetContext.colors.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              section.text,
+                              style: TextStyle(
+                                color: sheetContext.colors.text,
+                                fontSize: 13,
+                                height: 1.55,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GradientButton(
+                  label: '查询相关维修指引',
+                  icon: Icons.manage_search_rounded,
+                  height: 50,
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      AppPageRoute(
+                        child: ErrorCodePage(
+                          api: widget.api,
+                          initialBrand: manual.brand,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -136,50 +177,29 @@ class ToolboxPageState extends State<ToolboxPage> {
 
   @override
   Widget build(BuildContext context) {
+    final manuals = (_manuals ?? const <ManualInfo>[]).where((manual) {
+      final query = _query.trim().toLowerCase();
+      return query.isEmpty ||
+          manual.title.toLowerCase().contains(query) ||
+          (manual.brand ?? '').toLowerCase().contains(query) ||
+          deviceCategoryLabel(manual.category).contains(query);
+    }).toList();
     return Scaffold(
+      appBar: AppBar(title: Text(context.tr('手册资料库'))),
       body: AppBackground(
         child: SafeArea(
           child: ListView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 26),
             children: [
-              Text(
-                context.tr('工具箱'),
-                style: TextStyle(
-                  color: context.colors.text,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
+              TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: InputDecoration(
+                  hintText: context.tr('搜索手册'),
+                  prefixIcon: const Icon(Icons.search_rounded),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                context.tr('从识别故障到核对维修方案'),
-                style: TextStyle(color: context.colors.secondary, fontSize: 13),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ActionCard(
-                      icon: Icons.document_scanner_outlined,
-                      title: '拍照诊断',
-                      subtitle: '识别设备与可见故障',
-                      onTap: _openScan,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _ActionCard(
-                      icon: Icons.tag_rounded,
-                      title: '错误码速查',
-                      subtitle: '直接检索官方手册',
-                      onTap: _openErrorCode,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               SurfaceCard(
                 padding: EdgeInsets.zero,
                 child: ListTile(
@@ -197,33 +217,7 @@ class ToolboxPageState extends State<ToolboxPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      context.tr('手册资料库'),
-                      style: TextStyle(
-                        color: context.colors.text,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (_manuals != null)
-                    AppPill(
-                      label: context.tr('{count} 条记录', {
-                        'count': _manuals!.length,
-                      }),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 7),
-              Text(
-                context.tr('诊断引用的资料都可以在这里核对'),
-                style: TextStyle(color: context.colors.secondary, fontSize: 12),
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 22),
               if (_error != null)
                 SurfaceCard(
                   child: Column(
@@ -243,8 +237,13 @@ class ToolboxPageState extends State<ToolboxPage> {
                     child: CircularProgressIndicator(),
                   ),
                 )
+              else if (manuals.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(30),
+                  child: Center(child: Text(context.tr('暂无匹配手册'))),
+                )
               else
-                for (final manual in _manuals!) ...[
+                for (final manual in manuals) ...[
                   SurfaceCard(
                     padding: EdgeInsets.zero,
                     child: ListTile(
@@ -286,73 +285,6 @@ class ToolboxPageState extends State<ToolboxPage> {
                   ),
                   const SizedBox(height: 10),
                 ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 154),
-          padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: context.colors.border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: context.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: context.colors.primary, size: 22),
-              ),
-              Text(
-                context.tr(title),
-                style: TextStyle(
-                  color: context.colors.text,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.tr(subtitle),
-                style: TextStyle(
-                  color: context.colors.secondary,
-                  fontSize: 11,
-                  height: 1.35,
-                ),
-              ),
             ],
           ),
         ),

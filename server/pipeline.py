@@ -43,11 +43,15 @@ def _persist(session: dict, conn, user_id) -> dict:
     session["id"] = str(uuid.uuid4())
     session["created_at"] = datetime.now(timezone.utc).isoformat()
     session.setdefault("safety_refused", False)
+    session.setdefault("diagnosis_source", "mock")
+    session.setdefault("confidence", None)
     conn.execute(
         "INSERT INTO sessions (id,device_category,brand,model,error_code,"
-        "decision,decision_reason,safety_refused,created_at,user_id) "
+        "decision,decision_reason,safety_refused,diagnosis_source,confidence,"
+        "created_at,user_id) "
         "VALUES (:id,:device_category,:brand,:model,:error_code,"
-        ":decision,:decision_reason,:safety_refused,:created_at,:user_id)",
+        ":decision,:decision_reason,:safety_refused,:diagnosis_source,"
+        ":confidence,:created_at,:user_id)",
         {
             **session,
             "user_id": user_id,
@@ -86,7 +90,8 @@ def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn, us
             "device_category": vision.device_category, "brand": vision.brand,
             "model": vision.model, "error_code": vision.error_code,
             "decision": "refused", "decision_reason": f"{verdict.reason}{verdict.advice}",
-            "safety_refused": True, "steps": [],
+            "safety_refused": True, "diagnosis_source": "gemini",
+            "confidence": vision.confidence, "steps": [],
         }, conn, user_id)
 
     query = f"{vision.device_category} {vision.brand or ''} {vision.error_code or ''} " \
@@ -104,6 +109,7 @@ def analyze_image(image_bytes: bytes, filename: str | None, mock: bool, conn, us
         "device_category": vision.device_category, "brand": vision.brand,
         "model": vision.model, "error_code": vision.error_code,
         "decision": gen.decision, "decision_reason": gen.decision_reason,
+        "diagnosis_source": "gemini", "confidence": vision.confidence,
         "steps": steps,
     }, conn, user_id)
 
@@ -115,7 +121,8 @@ def diagnose_manual(brand: str, error_code: str, mock: bool, conn, user_id) -> d
             "device_category": "unknown", "brand": brand, "model": None,
             "error_code": error_code, "decision": "refused",
             "decision_reason": f"{verdict.reason}{verdict.advice}",
-            "safety_refused": True, "steps": [],
+            "safety_refused": True,
+            "diagnosis_source": "mock" if mock else "gemini", "steps": [],
         }, conn, user_id)
 
     chunks = retrieval.search(f"{brand} {error_code}", None, error_code)
@@ -134,5 +141,7 @@ def diagnose_manual(brand: str, error_code: str, mock: bool, conn, user_id) -> d
     return _persist({
         "device_category": "unknown", "brand": brand, "model": None,
         "error_code": error_code, "decision": gen.decision,
-        "decision_reason": gen.decision_reason, "steps": steps,
+        "decision_reason": gen.decision_reason,
+        "diagnosis_source": "gemini", "confidence": vision.confidence,
+        "steps": steps,
     }, conn, user_id)

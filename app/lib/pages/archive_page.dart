@@ -242,7 +242,15 @@ class _SessionTile extends StatelessWidget {
     final brandModel = [
       if (session.brand?.isNotEmpty ?? false) session.brand,
       if (session.model?.isNotEmpty ?? false) session.model,
-    ].join(' ');
+      if (session.errorCode?.isNotEmpty ?? false) session.errorCode,
+    ].join(' · ');
+    final completed = session.steps
+        .where((step) => step.feedback == 'done')
+        .length;
+    final needsProfessional =
+        session.safetyRefused ||
+        session.decision == 'professional' ||
+        session.steps.isEmpty;
     return Material(
       color: context.colors.surface,
       borderRadius: BorderRadius.circular(22),
@@ -309,22 +317,48 @@ class _SessionTile extends StatelessWidget {
                   ),
                 ],
               ),
+              if (session.decisionReason.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  context.tr(session.decisionReason),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: context.colors.secondary,
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      formatDateTime(session.createdAt),
+                      formatRelativeDateTime(
+                        session.createdAt,
+                        Localizations.localeOf(context).languageCode,
+                      ),
                       style: TextStyle(
                         color: context.colors.muted,
                         fontSize: 11,
                       ),
                     ),
                   ),
-                  AppPill(
-                    label: context.tr(decision.label),
-                    icon: decision.icon,
-                    color: decision.color,
+                  Text(
+                    needsProfessional
+                        ? context.tr('需要专业维修')
+                        : context.tr('{done}/{total} 个步骤已完成', {
+                            'done': completed,
+                            'total': session.steps.length,
+                          }),
+                    style: TextStyle(
+                      color: needsProfessional
+                          ? decision.color
+                          : context.colors.secondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),

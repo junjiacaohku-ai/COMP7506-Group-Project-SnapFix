@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     brand TEXT, model TEXT, error_code TEXT,
     decision TEXT, decision_reason TEXT,
     safety_refused INTEGER DEFAULT 0,
+    diagnosis_source TEXT NOT NULL DEFAULT 'mock',
+    confidence REAL,
     created_at TEXT,
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE
 );
@@ -112,6 +114,13 @@ def init() -> None:
                 "ALTER TABLE sessions ADD COLUMN user_id TEXT "
                 "REFERENCES users(id) ON DELETE CASCADE"
             )
+        if "diagnosis_source" not in columns:
+            conn.execute(
+                "ALTER TABLE sessions ADD COLUMN diagnosis_source TEXT "
+                "NOT NULL DEFAULT 'mock'"
+            )
+        if "confidence" not in columns:
+            conn.execute("ALTER TABLE sessions ADD COLUMN confidence REAL")
         token_columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(auth_tokens)")
         }

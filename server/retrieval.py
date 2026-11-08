@@ -71,6 +71,14 @@ def search(query: str, category: str | None = None, error_code: str | None = Non
 def all_manuals() -> list[dict]:
     seen: dict[str, dict] = {}
     for c in _load():
-        seen.setdefault(c["manual"], {"title": c["manual"], "category": c["category"],
-                                      "brand": c.get("brand")})
+        manual = seen.setdefault(
+            c["manual"],
+            {
+                "title": c["manual"],
+                "category": c["category"],
+                "brand": c.get("brand"),
+                "sections": [],
+            },
+        )
+        manual["sections"].append({"section": c["section"], "text": c["text"]})
     return list(seen.values())

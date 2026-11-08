@@ -31,13 +31,13 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   Future<void> _sendFeedback(RepairStep step, String feedback) async {
-    if (_pendingStepId != null || step.feedback == feedback) return;
+    if (_pendingStepId != null) return;
     setState(() => _pendingStepId = step.id);
     try {
       final updated = await widget.api.stepFeedback(
         _session.id,
         step.id,
-        feedback,
+        step.feedback == feedback ? '' : feedback,
       );
       if (!mounted) return;
       setState(() => _session = updated);
@@ -60,6 +60,66 @@ class _ResultPageState extends State<ResultPage> {
     );
   }
 
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.tr('删除这条记录？')),
+        content: Text(
+          dialogContext.tr('{category}的诊断记录将被永久删除。', {
+            'category': dialogContext.tr(
+              deviceCategoryLabel(_session.deviceCategory),
+            ),
+          }),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(dialogContext.tr('取消')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              dialogContext.tr('删除'),
+              style: TextStyle(color: dialogContext.colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.api.deleteSession(_session.id);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) showAppToast(context, context.tr('删除失败，请稍后重试'));
+    }
+  }
+
+  Widget _demoBanner() {
+    if (!_session.isDemo) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SurfaceCard(
+        color: context.colors.amber.withValues(alpha: 0.08),
+        borderColor: context.colors.amber.withValues(alpha: 0.3),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        child: Row(
+          children: [
+            Icon(Icons.science_outlined, color: context.colors.amber, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                context.tr('此结果来自确定性演示数据，并非真实 AI 识别。'),
+                style: TextStyle(color: context.colors.text, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_session.safetyRefused) return _buildRefusedPage();
@@ -68,14 +128,10 @@ class _ResultPageState extends State<ResultPage> {
       appBar: AppBar(
         title: Text(context.tr('诊断报告')),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Center(
-              child: AppPill(
-                label: context.tr('手册溯源'),
-                icon: Icons.verified_outlined,
-              ),
-            ),
+          IconButton(
+            tooltip: context.tr('删除诊断记录'),
+            onPressed: _delete,
+            icon: const Icon(Icons.delete_outline_rounded),
           ),
         ],
       ),
@@ -85,10 +141,11 @@ class _ResultPageState extends State<ResultPage> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
+            _demoBanner(),
             _DeviceCard(session: _session),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             _DecisionCard(session: _session),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -114,7 +171,7 @@ class _ResultPageState extends State<ResultPage> {
               context.tr('按顺序操作，可以随时标记完成进度'),
               style: TextStyle(color: context.colors.secondary, fontSize: 12),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             for (var i = 0; i < _session.steps.length; i++)
               _StepCard(
                 step: _session.steps[i],
@@ -126,11 +183,15 @@ class _ResultPageState extends State<ResultPage> {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-        child: GradientButton(
+        minimum: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: OutlinedButton.icon(
           onPressed: _showReport,
-          icon: Icons.description_outlined,
-          label: context.tr('生成双语报修信息'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            foregroundColor: context.colors.primary,
+          ),
+          icon: const Icon(Icons.description_outlined, size: 20),
+          label: Text(context.tr('生成双语报修信息')),
         ),
       ),
     );
@@ -138,17 +199,27 @@ class _ResultPageState extends State<ResultPage> {
 
   Widget _buildRefusedPage() {
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('安全评估'))),
+      appBar: AppBar(
+        title: Text(context.tr('安全评估')),
+        actions: [
+          IconButton(
+            tooltip: context.tr('删除诊断记录'),
+            onPressed: _delete,
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
+      ),
       body: AppBackground(
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 22),
-            child: Column(
-              children: [
-                const Spacer(),
-                Container(
-                  width: 104,
-                  height: 104,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
+            children: [
+              _demoBanner(),
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  width: 88,
+                  height: 88,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: context.colors.red.withValues(alpha: 0.09),
@@ -159,69 +230,80 @@ class _ResultPageState extends State<ResultPage> {
                   child: Icon(
                     Icons.gpp_maybe_outlined,
                     color: context.colors.red,
-                    size: 54,
+                    size: 46,
                   ),
                 ),
-                const SizedBox(height: 24),
-                AppPill(
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: AppPill(
                   label: context.tr('安全保护已触发'),
                   icon: Icons.shield_outlined,
                   color: context.colors.red,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  context.tr('这项维修不适合\n自行操作'),
-                  textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.tr('这项维修不适合\n自行操作'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: context.colors.text,
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                  height: 1.25,
+                  letterSpacing: -0.7,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: context.colors.red.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: context.colors.red.withValues(alpha: 0.24),
+                  ),
+                ),
+                child: Text(
+                  context.tr(_session.decisionReason),
                   style: TextStyle(
                     color: context.colors.text,
-                    fontSize: 29,
-                    fontWeight: FontWeight.w800,
-                    height: 1.25,
-                    letterSpacing: -0.7,
+                    fontSize: 14,
+                    height: 1.65,
                   ),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: context.colors.red.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: context.colors.red.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  child: Text(
-                    _session.decisionReason,
-                    style: TextStyle(
-                      color: context.colors.text,
-                      fontSize: 15,
-                      height: 1.7,
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                context.tr('为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: context.colors.secondary,
+                  fontSize: 12,
+                  height: 1.6,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  context.tr('为避免人身与设备风险，SnapFix 不会提供\n高风险故障的自行维修步骤。'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.colors.secondary,
-                    fontSize: 12,
-                    height: 1.6,
-                  ),
+              ),
+              const SizedBox(height: 28),
+              FilledButton.icon(
+                onPressed: _showReport,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: context.colors.red,
+                  foregroundColor: Colors.white,
                 ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: context.colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  icon: Icon(Icons.engineering_outlined, size: 22),
-                  label: Text(context.tr('返回并寻求专业帮助')),
+                icon: const Icon(Icons.description_outlined, size: 21),
+                label: Text(context.tr('生成报修信息')),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () =>
+                    Navigator.of(context).popUntil((route) => route.isFirst),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
                 ),
-              ],
-            ),
+                child: Text(context.tr('返回首页')),
+              ),
+            ],
           ),
         ),
       ),
@@ -290,9 +372,13 @@ class _DeviceCard extends StatelessWidget {
                 ),
               ),
               AppPill(
-                label: context.tr('诊断完成'),
-                icon: Icons.check_circle_outline_rounded,
-                color: context.colors.green,
+                label: context.tr(session.isDemo ? '演示数据' : '诊断已完成'),
+                icon: session.isDemo
+                    ? Icons.science_outlined
+                    : Icons.check_circle_outline_rounded,
+                color: session.isDemo
+                    ? context.colors.amber
+                    : context.colors.green,
               ),
             ],
           ),
@@ -335,9 +421,28 @@ class _DeviceCard extends StatelessWidget {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              formatDateTime(session.createdAt),
-              style: TextStyle(color: context.colors.muted, fontSize: 11),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.isDemo
+                      ? context.tr('演示数据')
+                      : session.confidence == null
+                      ? context.tr('在线 AI 诊断')
+                      : context.tr('识别置信度 {value}%', {
+                          'value': (session.confidence! * 100).round(),
+                        }),
+                  style: TextStyle(
+                    color: context.colors.secondary,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  formatDateTime(session.createdAt),
+                  style: TextStyle(color: context.colors.muted, fontSize: 11),
+                ),
+              ],
             ),
           ),
         ],
@@ -407,7 +512,7 @@ class _DecisionCard extends StatelessWidget {
           if (session.decisionReason.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              session.decisionReason,
+              context.tr(session.decisionReason),
               style: TextStyle(
                 color: context.colors.text,
                 fontSize: 14,
@@ -530,7 +635,7 @@ class _StepCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      step.content,
+                      context.tr(step.content),
                       style: TextStyle(
                         color: context.colors.text,
                         fontSize: 15,
@@ -545,8 +650,10 @@ class _StepCard extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 7,
+                      runSpacing: 7,
                       children: [
                         _FeedbackButton(
                           icon: Icons.check_rounded,
@@ -556,7 +663,6 @@ class _StepCard extends StatelessWidget {
                           enabled: !busy,
                           onTap: () => onFeedback('done'),
                         ),
-                        const SizedBox(width: 7),
                         _FeedbackButton(
                           icon: Icons.arrow_forward_rounded,
                           label: '跳过',
@@ -565,7 +671,6 @@ class _StepCard extends StatelessWidget {
                           enabled: !busy,
                           onTap: () => onFeedback('skipped'),
                         ),
-                        const SizedBox(width: 7),
                         _FeedbackButton(
                           icon: Icons.close_rounded,
                           label: '没用',
@@ -651,7 +756,8 @@ class _FeedbackButton extends StatelessWidget {
         duration: context.reduceMotion
             ? Duration.zero
             : const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: selected
@@ -662,10 +768,11 @@ class _FeedbackButton extends StatelessWidget {
           ),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 13,
+              size: 16,
               color: selected ? selectedColor : context.colors.secondary,
             ),
             const SizedBox(width: 4),
@@ -673,7 +780,7 @@ class _FeedbackButton extends StatelessWidget {
               context.tr(label),
               style: TextStyle(
                 color: selected ? selectedColor : context.colors.secondary,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -907,7 +1014,28 @@ class _ReportPaneState extends State<_ReportPane>
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.photo_library_outlined,
+                size: 17,
+                color: context.colors.secondary,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  context.tr('文字分享不包含照片，请手动添加故障照片。'),
+                  style: TextStyle(
+                    color: context.colors.secondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(

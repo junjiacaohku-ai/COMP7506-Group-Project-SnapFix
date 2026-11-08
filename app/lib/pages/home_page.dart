@@ -16,14 +16,12 @@ class HomePage extends StatefulWidget {
     required this.user,
     required this.onProfileTap,
     required this.onHistoryTap,
-    required this.onToolsTap,
   });
 
   final ApiClient api;
   final AuthUser user;
   final VoidCallback onProfileTap;
   final VoidCallback onHistoryTap;
-  final VoidCallback onToolsTap;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -31,6 +29,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _offline = false;
+  HealthInfo? _health;
   List<Session>? _sessions;
 
   @override
@@ -48,6 +47,7 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
       setState(() {
         _offline = false;
+        _health = results[0] as HealthInfo;
         _sessions = results[1] as List<Session>;
       });
     } catch (_) {
@@ -193,28 +193,17 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _ScanHero(online: !_offline, onTap: _openScan),
+                _ScanHero(
+                  online: !_offline,
+                  demo: _health?.mock ?? false,
+                  onTap: _openScan,
+                ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuickAction(
-                        icon: Icons.tag_rounded,
-                        title: '错误码速查',
-                        subtitle: '无需拍照，直接检索',
-                        onTap: _openErrorCode,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _QuickAction(
-                        icon: Icons.handyman_outlined,
-                        title: '工具与手册',
-                        subtitle: '安全检查与资料库',
-                        onTap: widget.onToolsTap,
-                      ),
-                    ),
-                  ],
+                _QuickAction(
+                  icon: Icons.tag_rounded,
+                  title: '错误码速查',
+                  subtitle: '无需拍照，直接检索',
+                  onTap: _openErrorCode,
                 ),
                 const SizedBox(height: 26),
                 Row(
@@ -308,9 +297,14 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _ScanHero extends StatelessWidget {
-  const _ScanHero({required this.online, required this.onTap});
+  const _ScanHero({
+    required this.online,
+    required this.demo,
+    required this.onTap,
+  });
 
   final bool online;
+  final bool demo;
   final VoidCallback onTap;
 
   @override
@@ -356,14 +350,22 @@ class _ScanHero extends StatelessWidget {
                       height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: online
-                            ? context.colors.green
-                            : context.colors.red,
+                        color: !online
+                            ? context.colors.red
+                            : demo
+                            ? context.colors.amber
+                            : context.colors.green,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      context.tr(online ? '已就绪' : '离线'),
+                      context.tr(
+                        !online
+                            ? '离线'
+                            : demo
+                            ? '演示模式'
+                            : '已就绪',
+                      ),
                       style: TextStyle(
                         color: context.colors.secondary,
                         fontSize: 11,
@@ -562,28 +564,44 @@ class _RecentSessionCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 13),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 5,
-                  backgroundColor: context.colors.surfaceRaised,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  context.tr('{done}/{total} 个步骤已完成', {
-                    'done': completed,
-                    'total': session.steps.length,
-                  }),
-                  style: TextStyle(
-                    color: context.colors.secondary,
-                    fontSize: 10,
+              if (session.safetyRefused ||
+                  session.decision == 'professional' ||
+                  session.steps.isEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    context.tr('需要专业维修'),
+                    style: TextStyle(
+                      color: context.colors.red,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 5,
+                    backgroundColor: context.colors.surfaceRaised,
                   ),
                 ),
-              ),
+                const SizedBox(height: 7),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    context.tr('{done}/{total} 个步骤已完成', {
+                      'done': completed,
+                      'total': session.steps.length,
+                    }),
+                    style: TextStyle(
+                      color: context.colors.secondary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

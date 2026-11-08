@@ -89,30 +89,6 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _selectAccent() {
-    final settings = AppSettingsScope.of(context);
-    _showPreferenceSheet<AppAccent>(
-      title: '选择主题色',
-      options: AppAccent.values,
-      current: settings.accent,
-      label: (value) => value.label,
-      onSelected: settings.setAccent,
-      errorMessage: '主题色保存失败',
-    );
-  }
-
-  void _selectTextScale() {
-    final settings = AppSettingsScope.of(context);
-    _showPreferenceSheet<AppTextScale>(
-      title: '选择字体大小',
-      options: AppTextScale.values,
-      current: settings.textScale,
-      label: (value) => value.label,
-      onSelected: settings.setTextScale,
-      errorMessage: '字体大小保存失败',
-    );
-  }
-
   Future<void> _setNotifications(bool value) async {
     final saved = await AppSettingsScope.of(context).setNotifications(value);
     if (!saved && mounted) {
@@ -357,20 +333,6 @@ class ProfilePageState extends State<ProfilePage> {
                         title: '外观',
                         subtitle: settings.appearance.label,
                         onTap: _selectAppearance,
-                      ),
-                      const Divider(height: 1, indent: 60),
-                      _SettingsTile(
-                        icon: Icons.palette_outlined,
-                        title: '主题色',
-                        subtitle: settings.accent.label,
-                        onTap: _selectAccent,
-                      ),
-                      const Divider(height: 1, indent: 60),
-                      _SettingsTile(
-                        icon: Icons.text_fields_rounded,
-                        title: '字体大小',
-                        subtitle: settings.textScale.label,
-                        onTap: _selectTextScale,
                       ),
                       const Divider(height: 1, indent: 60),
                       _SettingsTile(

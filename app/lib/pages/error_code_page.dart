@@ -6,20 +6,28 @@ import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
 import 'analyzing_page.dart';
+import 'toolbox_page.dart';
 
 class ErrorCodePage extends StatefulWidget {
-  const ErrorCodePage({super.key, required this.api});
+  const ErrorCodePage({super.key, required this.api, this.initialBrand});
 
   final ApiClient api;
+  final String? initialBrand;
 
   @override
   State<ErrorCodePage> createState() => _ErrorCodePageState();
 }
 
 class _ErrorCodePageState extends State<ErrorCodePage> {
-  final _brandController = TextEditingController();
+  late final TextEditingController _brandController;
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _brandController = TextEditingController(text: widget.initialBrand ?? '');
+  }
 
   @override
   void dispose() {
@@ -128,7 +136,15 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
                     icon: Icons.manage_search_rounded,
                     onPressed: _submit,
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 10),
+                  TextButton.icon(
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).push(AppPageRoute(child: ToolboxPage(api: widget.api))),
+                    icon: const Icon(Icons.menu_book_outlined, size: 19),
+                    label: Text(context.tr('浏览手册库')),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

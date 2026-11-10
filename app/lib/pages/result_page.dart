@@ -167,18 +167,31 @@ class _ResultPageState extends State<ResultPage> {
               ],
             ),
             const SizedBox(height: 7),
-            Text(
-              context.tr('按顺序操作，可以随时标记完成进度'),
-              style: TextStyle(color: context.colors.secondary, fontSize: 12),
-            ),
-            const SizedBox(height: 16),
-            for (var i = 0; i < _session.steps.length; i++)
-              _StepCard(
-                step: _session.steps[i],
-                isLast: i == _session.steps.length - 1,
-                busy: _pendingStepId != null,
-                onFeedback: (f) => _sendFeedback(_session.steps[i], f),
+            if (_session.steps.isEmpty)
+              SurfaceCard(
+                child: Text(
+                  context.tr('没有可安全提供的自行维修步骤，请使用下方报修信息寻求专业帮助。'),
+                  style: TextStyle(
+                    color: context.colors.secondary,
+                    fontSize: 13,
+                    height: 1.55,
+                  ),
+                ),
+              )
+            else ...[
+              Text(
+                context.tr('按顺序操作，可以随时标记完成进度'),
+                style: TextStyle(color: context.colors.secondary, fontSize: 12),
               ),
+              const SizedBox(height: 16),
+              for (var i = 0; i < _session.steps.length; i++)
+                _StepCard(
+                  step: _session.steps[i],
+                  isLast: i == _session.steps.length - 1,
+                  busy: _pendingStepId != null,
+                  onFeedback: (f) => _sendFeedback(_session.steps[i], f),
+                ),
+            ],
           ],
         ),
       ),

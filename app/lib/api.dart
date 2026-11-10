@@ -26,6 +26,7 @@ class ApiClient {
 
   final http.Client _client;
   final String baseUrl;
+  String languageCode = 'en';
   String? _accessToken;
   void Function()? onUnauthorized;
   void Function(Session session)? onDiagnosisCompleted;
@@ -254,10 +255,11 @@ class ApiClient {
   Future<Session> analyzeImage(String filePath) async {
     final request = http.MultipartRequest('POST', _uri('/api/analyze/image'))
       ..headers.addAll(_authHeaders)
+      ..fields['language'] = languageCode
       ..files.add(await http.MultipartFile.fromPath('file', filePath));
     final streamed = await _client
         .send(request)
-        .timeout(const Duration(seconds: 90));
+        .timeout(const Duration(seconds: 240));
     final body = await streamed.stream.bytesToString();
     final json = _decode(streamed.statusCode, body);
     final session = Session.fromJson(json as Map<String, dynamic>);
@@ -270,7 +272,11 @@ class ApiClient {
       () => _client.post(
         _uri('/api/diagnose/manual'),
         headers: _jsonHeaders,
-        body: jsonEncode({'brand': brand, 'error_code': errorCode}),
+        body: jsonEncode({
+          'brand': brand,
+          'error_code': errorCode,
+          'language': languageCode,
+        }),
       ),
     );
     final session = Session.fromJson(json as Map<String, dynamic>);

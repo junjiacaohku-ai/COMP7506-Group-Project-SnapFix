@@ -1,9 +1,7 @@
 """SnapFix(solo 版)FastAPI 入口:API 层,薄壳,业务在 pipeline.py。"""
 from __future__ import annotations
 
-import os
-
-from fastapi import Depends, FastAPI, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -25,7 +23,8 @@ app.add_middleware(
 
 db.init()
 
-MOCK_MODE = not os.environ.get("GEMINI_API_KEY")
+PROVIDER = providers.configured_provider()
+MOCK_MODE = PROVIDER is None
 
 
 def _bearer_token(authorization: str) -> str:
@@ -108,6 +107,7 @@ class DeleteAccountRequest(BaseModel):
 class ManualDiagnoseRequest(BaseModel):
     brand: str
     error_code: str
+    language: str = "zh"
 
 
 class FeedbackRequest(BaseModel):
@@ -123,7 +123,7 @@ def health():
     return {
         "status": "ok",
         "mock": MOCK_MODE,
-        "provider": "mock" if MOCK_MODE else "gemini",
+        "provider": PROVIDER or "mock",
         "providers": providers.status(),
     }
 
@@ -297,25 +297,39 @@ def update_preferences(
 
 
 @app.post("/api/analyze/image")
-async def analyze_image(file: UploadFile, user: dict = Depends(current_user)):
+async def analyze_image(
+    file: UploadFile,
+    language: str = Form(default="zh"),
+    user: dict = Depends(current_user),
+):
     image = await file.read()
     try:
         with db.connect() as conn:
             return pipeline.analyze_image(
-                image, file.filename, MOCK_MODE, conn, user["id"]
+                image, file.filename, PROVIDER, conn, user["id"], language
             )
     except QualityError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except pipeline.AnalysisError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
 @app.post("/api/diagnose/manual")
 def diagnose_manual(
     req: ManualDiagnoseRequest, user: dict = Depends(current_user)
 ):
-    with db.connect() as conn:
-        return pipeline.diagnose_manual(
-            req.brand, req.error_code, MOCK_MODE, conn, user["id"]
-        )
+    try:
+        with db.connect() as conn:
+            return pipeline.diagnose_manual(
+                req.brand,
+                req.error_code,
+                PROVIDER,
+                conn,
+                user["id"],
+                req.language,
+            )
+    except pipeline.AnalysisError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
 @app.get("/api/sessions")

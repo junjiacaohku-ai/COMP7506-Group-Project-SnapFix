@@ -403,6 +403,8 @@ class ProfilePageState extends State<ProfilePage> {
                             ? '下拉可重新检查'
                             : _health!.mock
                             ? '本地演示数据源'
+                            : _health!.provider == 'qwen'
+                            ? 'Qwen 在线诊断'
                             : 'Gemini 在线诊断',
                         trailing: Container(
                           width: 9,

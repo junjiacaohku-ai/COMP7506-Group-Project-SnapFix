@@ -189,7 +189,7 @@ class Session {
   final List<RepairStep> steps;
   final DateTime createdAt;
 
-  bool get isDemo => diagnosisSource != 'gemini';
+  bool get isDemo => diagnosisSource == 'mock';
 }
 
 String deviceCategoryLabel(String category) => switch (category) {

@@ -56,6 +56,7 @@ class SnapFixApp extends StatelessWidget {
         animation: settings,
         builder: (_, _) {
           notifications.languageCode = settings.locale.languageCode;
+          api.languageCode = settings.locale.languageCode;
           return MaterialApp(
             title: 'SnapFix',
             debugShowCheckedModeBanner: false,

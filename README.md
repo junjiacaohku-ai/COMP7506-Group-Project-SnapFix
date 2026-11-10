@@ -1,6 +1,6 @@
 <div align="center">
 
-# SnapFix
+# COMP7506 Group Project SnapFix
 
 **Snap it. Fix it. Or report it.**
 
@@ -8,12 +8,12 @@ AI-assisted appliance repair with manual evidence, safety guardrails, and biling
 
 **[English](README.md) · [简体中文](README.zh-CN.md)**
 
-[![HKU COMP7506](https://img.shields.io/badge/HKU-COMP7506-6E56CF)](https://github.com/junjiacaohku-ai/snapfix-solo)
+[![HKU COMP7506](https://img.shields.io/badge/HKU-COMP7506-6E56CF)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.7-54C5F8?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.11+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Qwen3-VL](https://img.shields.io/badge/AI-Qwen3--VL-7B61C9)](https://www.alibabacloud.com/help/en/model-studio/qwen-vl-compatible-with-openai)
-[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/snapfix-solo/tree/main/server/tests)
-[![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/snapfix-solo?style=social)](https://github.com/junjiacaohku-ai/snapfix-solo/stargazers)
+[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
+[![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/COMP7506-Group-Project-SnapFix?style=social)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/stargazers)
 
 <img src="docs/assets/snapfix-hero.png" alt="SnapFix product overview and real app screens" width="100%">
 
@@ -163,7 +163,7 @@ Google sign-in is optional and hidden until OAuth Client IDs are supplied. Apple
 ## 7. Project Structure
 
 ```text
-snapfix-solo/
+COMP7506-Group-Project-SnapFix/
 ├── app/                         # Flutter mobile application
 │   ├── lib/pages/               # Scan, analysis, diagnosis, history, profile
 │   ├── lib/models.dart          # Session, source, status and account models
@@ -263,7 +263,7 @@ This Solo mainline integrates selected outputs from the original team workstream
 | **Yang Ruijia** | FE-2 guidance & archive | Step guidance, repair history, report interactions, visual design and video materials |
 | **Zhang Fan** | Data & content | Corpus ETL, demonstration scenarios, market research, acceptance records and attributed image assets |
 
-The original [team repository](https://github.com/junjiacaohku-ai/snapfix) and its contribution records remain available. Third-party manuals and photographs retain their respective source terms and licences.
+Third-party manuals and photographs retain their respective source terms and licences.
 
 ---
 

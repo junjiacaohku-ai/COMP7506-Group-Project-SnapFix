@@ -1,6 +1,6 @@
 <div align="center">
 
-# SnapFix 随手修
+# COMP7506 Group Project SnapFix 随手修
 
 **先搞懂，再决定。**
 
@@ -8,12 +8,12 @@
 
 **[English](README.md) · [简体中文](README.zh-CN.md)**
 
-[![HKU COMP7506](https://img.shields.io/badge/HKU-COMP7506-6E56CF)](https://github.com/junjiacaohku-ai/snapfix-solo)
+[![HKU COMP7506](https://img.shields.io/badge/HKU-COMP7506-6E56CF)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix)
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.7-54C5F8?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.11+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Qwen3-VL](https://img.shields.io/badge/AI-Qwen3--VL-7B61C9)](https://www.alibabacloud.com/help/en/model-studio/qwen-vl-compatible-with-openai)
-[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/snapfix-solo/tree/main/server/tests)
-[![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/snapfix-solo?style=social)](https://github.com/junjiacaohku-ai/snapfix-solo/stargazers)
+[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
+[![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/COMP7506-Group-Project-SnapFix?style=social)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/stargazers)
 
 <img src="docs/assets/snapfix-hero.png" alt="SnapFix 产品概览与真实 App 界面" width="100%">
 
@@ -163,7 +163,7 @@ Google 登录需配置 OAuth Client ID，未配置时按钮隐藏；Apple 登录
 ## 7. 项目结构
 
 ```text
-snapfix-solo/
+COMP7506-Group-Project-SnapFix/
 ├── app/                         # Flutter 移动应用
 │   ├── lib/pages/               # 拍照、分析、诊断、档案、个人中心
 │   ├── lib/models.dart          # 诊断、来源、状态和账号模型
@@ -263,7 +263,7 @@ flutter test
 | **杨蕊嘉** | FE-2 指导与档案 | 分步指导、维修档案、报修交互、视觉设计与视频材料 |
 | **张帆** | 数据与内容 | 语料 ETL、演示场景、市场调研、验收记录与带来源的公开图片 |
 
-原[团队仓库](https://github.com/junjiacaohku-ai/snapfix)及贡献记录继续保留。第三方手册与照片遵循各自来源条款和许可。
+第三方手册与照片遵循各自来源条款和许可。
 
 ---
 

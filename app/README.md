@@ -1,17 +1,23 @@
-# snapfix_solo
+# SnapFix Flutter App
 
-A new Flutter project.
+This directory contains the SnapFix mobile client for iOS and Android.
 
-## Getting Started
+## Run
 
-This project is a starting point for a Flutter application.
+Start the FastAPI backend from `../server`, then run:
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+The default API address is `http://127.0.0.1:8001` for iOS Simulator. Use `http://10.0.2.2:8001` for Android Emulator after updating `lib/api.dart`. Physical devices require a reachable LAN or deployed backend address.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Verify
+
+```sh
+flutter analyze
+flutter test
+```
+
+See the [English project homepage](../README.md) or [简体中文项目主页](../README.zh-CN.md) for architecture, AI configuration, demo scenarios, evaluation, and source documentation.

@@ -245,8 +245,10 @@ Camera permissions, system notifications, sharing, and OAuth should still receiv
 
 ### Project documents
 
-- [Official course requirement summary](2026-11-10%20Group%20Project%20官方要求汇总.md)
-- [Delivery planning](docs/2026-11-10-今日交付计划.md)
+- [Project report PDF](docs/report/snapfix-report.pdf)
+- [Report LaTeX source](docs/report/snapfix-report.tex)
+- [Demo video script](docs/video-script.md)
+- [Validation and reproduction guide](docs/validation.md)
 - [Manual source manifest](server/data/manifest.json)
 - [Public image attribution](docs/demo-assets/public/sources.json)
 - [Known issues](docs/openissues-2026-10-23.md)

@@ -245,8 +245,10 @@ flutter test
 
 ### 项目文档
 
-- [官方课程要求汇总](2026-11-10%20Group%20Project%20官方要求汇总.md)
-- [交付计划](docs/2026-11-10-今日交付计划.md)
+- [项目报告 PDF](docs/report/snapfix-report.pdf)
+- [报告 LaTeX 源文件](docs/report/snapfix-report.tex)
+- [演示视频脚本](docs/video-script.md)
+- [验证与复现指南](docs/validation.md)
 - [手册来源清单](server/data/manifest.json)
 - [公开图片署名与许可](docs/demo-assets/public/sources.json)
 - [已知问题](docs/openissues-2026-10-23.md)

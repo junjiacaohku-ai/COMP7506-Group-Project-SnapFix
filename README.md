@@ -1,143 +1,276 @@
-# SnapFix 随手修（solo 完整版）
+<div align="center">
 
-> 先搞懂，再决定。拍一张照片 → 哪坏了、能不能自己修、怎么修、修不了怎么报修。
-> 本仓库为 Solo 主线版本，并在保留来源与贡献记录的前提下吸收团队版的数据、测试和交互成果。
+# SnapFix
 
-## 架构
+**Snap it. Fix it. Or report it.**
 
-```
-server/  FastAPI 后端：质量门 → 视觉模型 → 安全门 → 手册检索 → 生成 → 引用校验
-app/     Flutter 双端 App（iOS / Android）
-```
+AI-assisted appliance repair with manual evidence, safety guardrails, and bilingual repair requests.
 
-支持 **阿里云百炼 Qwen3-VL** 和 **Google Gemini**。没有可用模型配置时，后端进入
-明确标识的 **mock 确定性演示模式**，数据位于 `server/mock_data.py`。
-真实在线模式失败时会明确报错或停止提供无依据步骤，**不会返回无关 mock 场景冒充真实识别**。
+**[English](README.md) · [简体中文](README.zh-CN.md)**
 
-## 运行
+[![HKU COMP7506](https://img.shields.io/badge/HKU-COMP7506-6E56CF)](https://github.com/junjiacaohku-ai/snapfix-solo)
+[![Flutter](https://img.shields.io/badge/Flutter-3.47.7-54C5F8?logo=flutter&logoColor=white)](https://flutter.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.11+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Qwen3-VL](https://img.shields.io/badge/AI-Qwen3--VL-7B61C9)](https://www.alibabacloud.com/help/en/model-studio/qwen-vl-compatible-with-openai)
+[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/snapfix-solo/tree/main/server/tests)
+[![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/snapfix-solo?style=social)](https://github.com/junjiacaohku-ai/snapfix-solo/stargazers)
+
+<img src="docs/assets/snapfix-hero.png" alt="SnapFix product overview and real app screens" width="100%">
+
+[Overview](#overview) · [Features](#features) · [Architecture](#architecture) · [Quick Start](#quick-start) · [Evaluation](#evaluation) · [Limitations](#limitations)
+
+</div>
+
+---
+
+<a id="overview"></a>
+## 1. Overview
+
+SnapFix is a smart-home maintenance application for people who know an appliance is not working but do not know the model, the correct instructions, or how to explain the problem to a landlord or technician.
+
+A photo or error code becomes a structured action plan: what is visible, whether DIY is appropriate, which manual supports each step, and how to ask for professional help. The goal is not another general-purpose chatbot, but a complete **diagnosis → safety decision → repair or report** workflow.
+
+> **Safety notice:** SnapFix provides AI-assisted guidance, not a professional inspection. High-risk devices and unsupported repairs are referred to qualified technicians.
+
+<a id="features"></a>
+## 2. Product Features
+
+| Capability | Delivered behavior |
+|---|---|
+| **Photo diagnosis** | Qwen3-VL extracts the appliance, visible symptoms, labels, and error codes without inventing missing details. |
+| **Manual lookup** | Error-code input provides a non-camera path into the same retrieval and diagnosis workflow. |
+| **Grounded guidance** | Repair steps cite exact manual chunks with source text, PDF pages, and source URLs. |
+| **Safety guardrails** | Deterministic rules run before generation and again on generated steps. |
+| **Repair tracking** | Mark steps done, skipped, or not useful; tap again to undo. Progress is persisted. |
+| **Repair status** | Track investigating, awaiting repair, and resolved states with history filters. |
+| **Bilingual reports** | Edit, save, reset, copy, and share Chinese or English repair requests. |
+| **Real accounts** | Email, Sign in with Apple, and Google OAuth with per-user data isolation. |
+| **Appearance & language** | English and Simplified Chinese, light/dark/system appearance, and reduced motion. |
+| **Explicit demo mode** | Deterministic scenarios work without a model key and are clearly labelled. |
+
+<a id="architecture"></a>
+## 3. System Architecture
+
+<div align="center">
+<img src="docs/assets/architecture.png" alt="SnapFix Flutter, FastAPI, AI provider, SQLite and manual corpus architecture" width="100%">
+</div>
+
+The architecture deliberately separates probabilistic AI output from deterministic safety and evidence checks. A model may propose guidance, but it cannot bypass the safety gate or introduce an untraceable citation.
+
+### Diagnosis pipeline
+
+1. **Image quality** — Validate file size, dimensions, brightness, sharpness, and image readability.
+2. **Vision extraction** — Extract device category, brand, model, error code, visible symptoms, and confidence as structured JSON.
+3. **Safety gate** — Refuse high-risk categories before any repair generation.
+4. **BM25 retrieval** — Rank real manual chunks using brand aliases, category filters, bilingual expansion, and normalized error codes.
+5. **Grounded generation** — Ask the provider for a decision and steps constrained to the retrieved evidence and current interface language.
+6. **Citation validation** — Accept only exact chunk IDs returned by retrieval; preserve source text and PDF pages.
+7. **Generated-content safety review** — Drop generated steps that introduce dangerous operations, even when a citation exists.
+8. **Persistence** — Save the session, feedback, repair status, and editable reports under the authenticated user.
+
+## 4. Evidence and Data
+
+| Asset | Current contents | Purpose |
+|---|---|---|
+| **Manual corpus** | 16 public documents, 2,032 text chunks | Model-specific evidence retrieval and source inspection |
+| **Provenance** | Source URLs, PDF pages, stable chunk IDs, source hashes | Trace a generated step back to its original document |
+| **Extraction audit** | Sparse pages, undecodable pages, extractor records, source-bound corrections | Prevent unreadable PDF content from being treated as reliable text |
+| **Public demo images** | Attribution, licences, hashes, and usage notes | Reproducible demonstrations without claiming confirmed faults |
+| **Quality variants** | 26 controlled dark/blur transformations | Repeatable image-quality regression checks |
+
+**Important:** Public appearance photographs demonstrate input and quality handling; they are not labelled proof of real-world diagnostic accuracy.
+
+<a id="quick-start"></a>
+## 5. Quick Start
+
+### Requirements
+
+- Python **3.11+**
+- Flutter **3.47.7** or a compatible newer version
+- Xcode / CocoaPods for iOS Simulator
+- Optional: Alibaba Cloud Model Studio Qwen API Key for live AI
+
+### Backend
 
 ```bash
-# 后端（Python 3.11+）
 cd server
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # 可选：填入模型配置启用真管线
-uvicorn main:app --reload --port 8001   # → http://127.0.0.1:8001/docs
-
-# 前端（另开终端）
-cd app && flutter run   # iOS 模拟器直接访问 127.0.0.1:8001；Android 模拟器改 10.0.2.2
+python3 -m venv .venv
+source .venv/bin/activate             # Windows: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+cp .env.example .env                   # Optional; never commit this file
+python -m uvicorn main:app --reload --port 8001
 ```
 
-健康检查：`GET /api/health`。`provider` 返回 `qwen`、`gemini` 或 `mock`。
+The first launch imports the manual corpus into SQLite automatically.
 
-## 真实语料与测试
-
-`server/data/` 包含 16 份公开资料及 2,032 个带 chunk ID、PDF 页码和来源 URL 的文本块。
-首次启动会自动导入 SQLite；PDF 原文件、提取审计和文本修正记录一并保留。
-`docs/demo-assets/` 中的公开照片保留作者、许可和哈希信息；外观照片不代表已确认故障。
+Health check:
 
 ```bash
-# 后端测试使用独立临时数据库，不访问真实模型
-cd server
-.venv/bin/python -m pip install -r requirements.txt -r requirements-dev.txt
-.venv/bin/python -m pytest tests -q
-
-# Flutter 模型与产品交互测试
-cd app
-flutter test
+curl http://127.0.0.1:8001/api/health
 ```
 
-## Qwen 真实诊断配置
+The response explicitly identifies `qwen`, `gemini`, or `mock`.
 
-1. 在阿里云 Model Studio（百炼）开通服务，选择 **中国香港** 地域。
-2. 在同一地域创建 API Key，并确认模型 `qwen3-vl-plus` 可用。
-3. 在 `server/.env` 配置：
+### Live Qwen configuration
 
-```bash
+1. Enable **Alibaba Cloud Model Studio** and select **China (Hong Kong)**.
+2. Create an API Key in the same region and confirm `qwen3-vl-plus` availability.
+3. Add the following to `server/.env`:
+
+```dotenv
 AI_PROVIDER=qwen
-DASHSCOPE_API_KEY=你的Key
+DASHSCOPE_API_KEY=your_local_key
 DASHSCOPE_BASE_URL=https://cn-hongkong.dashscope.aliyuncs.com/compatible-mode/v1
 QWEN_MODEL=qwen3-vl-plus
 ```
 
-也可将 `DASHSCOPE_BASE_URL` 换为工作空间详情中的 API Host，并保留
-`/compatible-mode/v1`。Key、地域与 Base URL 必须匹配。`.env` 已被 Git 忽略，
-不要提交真实 Key。
+A workspace-specific API Host can replace `DASHSCOPE_BASE_URL`; keep `/compatible-mode/v1`. The Key, region, and Base URL must match. Never commit real credentials.
 
-使用 Gemini 时设置 `AI_PROVIDER=gemini` 和 `GEMINI_API_KEY`。App 会把当前界面
-语言传给后端，真实 AI 的决策理由、步骤和安全说明使用中英文生成；手册引用保留原文。
+To use Gemini instead:
 
-## 真实账号与个人档案
-
-首次打开需注册或登录。支持邮箱 + 密码、Sign in with Apple；Google 登录在配置
-OAuth Client ID 后启用。不提供未接入的验证码或找回密码入口。密码使用 PBKDF2
-加盐哈希；访问令牌保存在设备 Keychain / Android Keystore，服务器只保存令牌哈希。
-诊断、步骤反馈、删除与报修接口均按当前用户隔离。
-
-界面默认使用 English，可在登录页右上角或个人中心的“语言”切换为简体中文。
-语言选择保存在设备上，重启后保留。界面文案随语言切换，手册引用保留来源语言。
-
-Apple 使用原生授权、一次性 nonce 与服务端 JWKS/JWT 校验。Apple / Google 身份通过
-`auth_identities` 关联账号；已验证邮箱相同则复用现有用户，不创建重复账号。
-Apple 需要有效的 Apple Developer Program 配置，并已为 App ID 启用 Sign in with Apple。
-
-### Google OAuth 配置
-
-1. 在 Google Cloud 配置 OAuth 同意屏幕，创建 **iOS** 类型的 OAuth Client ID，
-   bundle id 使用 `hk.snapfix.snapfixSolo`。
-2. 推荐另建 **Web application** 类型的 OAuth Client ID，供后端验证 ID Token。
-   开发环境也可只使用 iOS Client ID，此时将 `GOOGLE_SERVER_CLIENT_ID` 留空。
-3. 在 `server/.env` 设置 `GOOGLE_CLIENT_ID` 为 iOS Client ID，
-   `GOOGLE_SERVER_CLIENT_ID` 为 Web application Client ID。后端优先使用后者，
-   未设置时回退到 iOS Client ID。
-4. 在 `app/ios/Flutter/Auth.xcconfig` 填入 iOS Client ID、对应的 reversed Client ID，
-   以及 Web application Client ID。
-5. 启动 App 时传入同一组配置：
-
-```bash
-flutter run \
-  --dart-define=GOOGLE_CLIENT_ID=你的-iOS-Client-ID \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=你的-Web-Client-ID
+```dotenv
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_local_key
 ```
 
-未配置 iOS Client ID 时 Google 按钮隐藏；后端没有可用的 Client ID 时，
-OAuth 接口返回 503，不会伪造登录结果。
+### Flutter app
 
-## 演示场景对照（mock 模式）
+```bash
+cd app
+flutter pub get
+flutter run
+```
 
-| 场景 | 触发方式 | 预期 |
+- iOS Simulator uses `http://127.0.0.1:8001`.
+- Android Emulator uses `http://10.0.2.2:8001` after changing the API address.
+- A physical phone requires a reachable LAN or deployed backend; its own `127.0.0.1` is not your computer.
+
+Google sign-in is optional and hidden until OAuth Client IDs are supplied. Apple sign-in requires the corresponding Apple Developer configuration.
+
+## 6. Demo Scenarios
+
+| Scenario | Input | Expected result |
 |---|---|---|
-| 路由器红灯 | 拍/传文件名含 router/tplink 的照片 | 识别 TP-Link，4 步带引用排查 |
-| 洗衣机 E24 | 错误码速查输 Bosch + E24 | 排水滤网清理 3 步 + 适合自己修 |
-| IKEA BILLY | 文件名含 ikea/billy 的照片 | 组装步骤 + 防倾倒警示 |
-| 微波炉 | 文件名含 microwave/微波炉的照片 | **安全门拒答**，零步骤 |
-| 模糊/过暗照片 | 任一过暗过小照片 | 质量门 422 + 重拍引导 |
-| 报修闭环 | 任一诊断后点“生成报修信息” | 中英双语报修文本，可复制/分享 |
+| Router indicator | Known demo photo or filename containing `router` / `tplink` | TP-Link external troubleshooting with labelled demo sources |
+| Bosch E24 | Brand `Bosch`, code `E24` | Deterministic washer demonstration in mock mode; real corpus retrieval in online mode |
+| IKEA BILLY | Known demo photo or filename containing `ikea` / `billy` | Assembly guidance and anti-tip warning |
+| Microwave | Known demo photo or filename containing `microwave` | Safety refusal, no DIY steps, repair-request entry |
+| Poor image | Dark, blurred, tiny, invalid, or oversized image | HTTP 422 with a localized retake explanation |
+| Repair request | Complete a diagnosis and open the report sheet | Editable Chinese and English drafts, copy and share |
 
-mock 只通过文件名关键词或已知演示图片指纹匹配场景；未知图片明确拒绝，不进行随机轮换。
-mock 仅替换诊断数据源，账号与个人档案仍使用真实后端流程。
+**Mock integrity:** Unknown images are rejected rather than randomly assigned to an unrelated scenario.
 
-## 安全与隐私
+## 7. Project Structure
 
-- 安全门（`safety_gate.py`）在生成前后均执行高危规则检查，命中即停止或丢弃危险步骤。
-- 引用校验：生成步骤必须引用检索结果中的真实 chunk ID，并保留原文、页码和来源。
-- 没有匹配手册、型号依据不足或 DIY 步骤未通过校验时，转为专业帮助，不伪造操作指引。
-- 支持排查中、待维修、已解决状态，以及可编辑、保存和重置的中英报修草稿。
-- 照片处理后即删，不落盘；在线模式会将照片发送至所配置的模型服务。
-- 诊断记录按账号隔离，无行为追踪。
+```text
+snapfix-solo/
+├── app/                         # Flutter mobile application
+│   ├── lib/pages/               # Scan, analysis, diagnosis, history, profile
+│   ├── lib/models.dart          # Session, source, status and account models
+│   └── test/                    # Model and product workflow tests
+├── server/
+│   ├── main.py                  # Authenticated FastAPI endpoints
+│   ├── pipeline.py              # Quality, safety, retrieval and citation pipeline
+│   ├── providers.py             # Qwen / Gemini provider adapters
+│   ├── retrieval.py             # BM25, aliases and error-code normalization
+│   ├── corpus.py                # Reproducible PDF extraction
+│   ├── corpus_store.py          # Validated, idempotent corpus import
+│   ├── image_quality.py         # Conservative image checks
+│   ├── data/                    # Manuals, chunks, provenance and audits
+│   └── tests/                   # Isolated backend regression tests
+├── docs/
+│   ├── assets/                  # README visuals and real UI screenshots
+│   └── demo-assets/             # Attributed public images and quality variants
+├── demo-photos/                 # Four original synthetic demonstration images
+├── README.md                    # English project homepage
+└── README.zh-CN.md              # 简体中文项目主页
+```
 
-## 已知问题
+<a id="evaluation"></a>
+## 8. Evaluation
 
-- **iOS 26.3 模拟器不渲染瞬时提示（toast）**：错误提示/复制成功等短驻留 UI
-  （SnackBar/自动关闭 dialog）在该模拟器上不上屏，静态对话框与底部表单正常。
-  已用 10+ 种实现交叉验证定位为模拟器/Impeller 渲染层怪癖，非应用逻辑问题；
-  代码使用标准 `ScaffoldMessenger.showSnackBar`，需在真机上复核。
-  详见 `docs/openissues-2026-10-23.md`。
+### Automated checks
 
+```bash
+# Backend: isolated temporary database; no live model calls
+cd server
+.venv/bin/python -m pip install -r requirements.txt -r requirements-dev.txt
+.venv/bin/python -m pytest tests -q
 
-## 来源与贡献
+# Flutter: model, source, feedback, status and report workflows
+cd app
+flutter analyze
+flutter test
+```
 
-本版本保留 Solo 的 Qwen、账号和中英文产品主线，并吸收团队版公开成果：
-张帆的语料、数据验证与公开素材，史珺瑛的 BM25/SQLite 与报修工作，
-杨蕊嘉的维修交互设计参考，以及朱雨泰民的相机流程基础。
-原团队仓库与贡献记录继续保留；引用公开资料和图片时以各文件中的来源与许可为准。
+| Verification | Current result | What it does—and does not—establish |
+|---|---|---|
+| Backend regression | **46 passed** | Corpus, retrieval, safety, image quality, account isolation, status and drafts |
+| Flutter tests | **5 passed** | Model parsing and product interaction logic |
+| Flutter static analysis | **No issues found** | Static Dart quality, not device compatibility |
+| Image-quality variants | **26 controlled cases** | Dark/blur retake behavior, not diagnostic accuracy |
+| Real Qwen HTTP flows | **Router, microwave, Bosch E24 checked** | Live provider integration and source validation on those scenarios |
+| Manual corpus | **16 documents / 2,032 chunks** | Available evidence coverage, not universal appliance support |
+
+### Validation principles
+
+- Live AI failures never return unrelated mock diagnoses.
+- No matched manual or failed validation means no unsupported DIY steps.
+- Mock success, screenshot appearance, and public photos are not presented as model accuracy evidence.
+
+## 9. Privacy and Security
+
+- Passwords use salted PBKDF2 hashes; server-stored access tokens are hashed.
+- Device tokens use Keychain / Android Keystore through secure storage.
+- Original photos are not written to SQLite; online diagnosis sends images to the configured AI provider.
+- Sessions, preferences, reports, and deletion operations are scoped to the authenticated user.
+- Account deletion removes associated user data through backend cascading rules.
+
+<a id="limitations"></a>
+## 10. Limitations
+
+SnapFix is currently a course project and a local-first development build, not a deployed public repair service. The corpus covers a small set of devices, and the current tests do not establish broad diagnostic accuracy.
+
+Camera permissions, system notifications, sharing, and OAuth should still receive physical-device validation before production use. A known iOS 26.3 Simulator rendering issue affects transient Toast presentation; see [`docs/openissues-2026-10-23.md`](docs/openissues-2026-10-23.md).
+
+## 11. Roadmap
+
+- [ ] Expand confirmed fault photographs and manual coverage.
+- [ ] Complete physical-device camera, notification, sharing, and OAuth checks.
+- [ ] Add production deployment, operational monitoring, and public privacy pages.
+- [ ] Evaluate recognition and safety on a larger labelled dataset.
+- [ ] Improve multi-turn follow-up without weakening evidence requirements.
+
+## 12. Documentation and Acknowledgements
+
+### Project documents
+
+- [Official course requirement summary](2026-11-10%20Group%20Project%20官方要求汇总.md)
+- [Delivery planning](docs/2026-11-10-今日交付计划.md)
+- [Manual source manifest](server/data/manifest.json)
+- [Public image attribution](docs/demo-assets/public/sources.json)
+- [Known issues](docs/openissues-2026-10-23.md)
+
+### Team provenance
+
+This Solo mainline integrates selected outputs from the original team workstreams. The table records the original team roles and the sources referenced by this repository; it is not a claim that every team feature was merged unchanged.
+
+| Contributor | Original team role | Workstream and coordination responsibilities |
+|---|---|---|
+| **Cao Junjia** | **Team lead · BE-1 pipeline** | Team planning and task coordination; backend architecture, API contracts, providers and safety; integration review, PR coordination and submission planning |
+| **Shi Junying** | BE-2 retrieval & storage | BM25 retrieval, SQLite persistence, reporting endpoints and backend documentation |
+| **Zhu Yutaimin** | FE-1 scan & diagnosis | Flutter foundations, shared components, home, camera, preview and diagnosis flow |
+| **Yang Ruijia** | FE-2 guidance & archive | Step guidance, repair history, report interactions, visual design and video materials |
+| **Zhang Fan** | Data & content | Corpus ETL, demonstration scenarios, market research, acceptance records and attributed image assets |
+
+The original [team repository](https://github.com/junjiacaohku-ai/snapfix) and its contribution records remain available. Third-party manuals and photographs retain their respective source terms and licences.
+
+---
+
+<div align="center">
+
+**SnapFix — Real AI. Real manuals. Clear next steps.**
+
+HKU COMP7506 · Smart Home Maintenance · Flutter + FastAPI + Qwen3-VL
+
+</div>

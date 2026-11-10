@@ -21,6 +21,7 @@ class ArchivePage extends StatefulWidget {
 class ArchivePageState extends State<ArchivePage> {
   List<Session>? _sessions;
   String? _error;
+  String _statusFilter = 'all';
 
   @override
   void initState() {
@@ -98,6 +99,12 @@ class ArchivePageState extends State<ArchivePage> {
   @override
   Widget build(BuildContext context) {
     final sessions = _sessions;
+    final filteredSessions = sessions
+        ?.where(
+          (session) =>
+              _statusFilter == 'all' || session.status == _statusFilter,
+        )
+        .toList();
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
@@ -141,7 +148,33 @@ class ArchivePageState extends State<ArchivePage> {
                   ],
                 ),
               ),
-              Expanded(child: _buildBody()),
+              if (sessions != null && sessions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final entry in const {
+                          'all': '全部',
+                          'investigating': '排查中',
+                          'awaiting_repair': '待维修',
+                          'resolved': '已解决',
+                        }.entries)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(context.tr(entry.value)),
+                              selected: _statusFilter == entry.key,
+                              onSelected: (_) =>
+                                  setState(() => _statusFilter = entry.key),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              Expanded(child: _buildBody(filteredSessions)),
             ],
           ),
         ),
@@ -149,8 +182,7 @@ class ArchivePageState extends State<ArchivePage> {
     );
   }
 
-  Widget _buildBody() {
-    final sessions = _sessions;
+  Widget _buildBody(List<Session>? sessions) {
     if (_error != null) {
       return _CenteredHint(
         icon: Icons.cloud_off_outlined,
@@ -166,6 +198,13 @@ class ArchivePageState extends State<ArchivePage> {
           height: 30,
           child: CircularProgressIndicator(strokeWidth: 2.5),
         ),
+      );
+    }
+    if (sessions.isEmpty && _statusFilter != 'all') {
+      return const _CenteredHint(
+        icon: Icons.filter_list_off_outlined,
+        title: '没有匹配记录',
+        text: '尝试切换其他维修状态',
       );
     }
     if (sessions.isEmpty) {
@@ -346,14 +385,20 @@ class _SessionTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    needsProfessional
+                    session.status != 'investigating'
+                        ? context.tr(repairStatusLabel(session.status))
+                        : needsProfessional
                         ? context.tr('需要专业维修')
                         : context.tr('{done}/{total} 个步骤已完成', {
                             'done': completed,
                             'total': session.steps.length,
                           }),
                     style: TextStyle(
-                      color: needsProfessional
+                      color: session.status == 'resolved'
+                          ? context.colors.green
+                          : session.status == 'awaiting_repair'
+                          ? context.colors.amber
+                          : needsProfessional
                           ? decision.color
                           : context.colors.secondary,
                       fontSize: 11,

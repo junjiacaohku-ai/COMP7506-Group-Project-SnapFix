@@ -1,14 +1,16 @@
-"""管线编排：质量门 → vision → 安全门 → 检索 → 生成 → 引用校验。"""
+"""质量门 → 视觉提取 → 安全门 → BM25 → 生成 → chunk 引用与安全复核。"""
 from __future__ import annotations
 
 import io
+import re
 
-from PIL import Image, ImageFilter, ImageStat
+from PIL import Image
 
 import mock_data
 import providers
 import retrieval
 import safety_gate
+from image_quality import check_image
 
 
 class QualityError(Exception):
@@ -21,23 +23,20 @@ class AnalysisError(Exception):
         self.status_code = status_code
 
 
+def _normalize_code(value: str | None) -> str | None:
+    value = (value or "").strip().upper()
+    return re.sub(r"^E\s*[:：]?\s*(\d+)$", r"E\1", value) or None
+
+
 def quality_gate(image_bytes: bytes) -> str:
+    quality = check_image(image_bytes)
+    if not quality.accepted:
+        raise QualityError(quality.reason)
     try:
         source = Image.open(io.BytesIO(image_bytes))
-        mime_type = Image.MIME.get(source.format or "", "image/jpeg")
-        img = source.convert("L")
+        return Image.MIME.get(source.format or "", "image/jpeg")
     except Exception:
-        raise QualityError("无法识别的图片,请重拍")
-    w, h = img.size
-    if min(w, h) < 480:
-        raise QualityError("照片分辨率过低,请靠近一些重拍")
-    brightness = ImageStat.Stat(img).mean[0]
-    if brightness < 25:
-        raise QualityError("照片过暗,请开灯或到亮处重拍")
-    edges = img.filter(ImageFilter.FIND_EDGES)
-    if ImageStat.Stat(edges).var[0] < 20:
-        raise QualityError("照片模糊,请拿稳对焦后重拍")
-    return mime_type
+        raise QualityError("无法读取图片，请上传有效图片。")
 
 
 def _persist(session: dict, conn, user_id) -> dict:
@@ -49,13 +48,14 @@ def _persist(session: dict, conn, user_id) -> dict:
     session.setdefault("safety_refused", False)
     session.setdefault("diagnosis_source", "mock")
     session.setdefault("confidence", None)
+    session.setdefault("status", "investigating")
     conn.execute(
         "INSERT INTO sessions (id,device_category,brand,model,error_code,"
         "decision,decision_reason,safety_refused,diagnosis_source,confidence,"
-        "created_at,user_id) "
+        "status,created_at,user_id) "
         "VALUES (:id,:device_category,:brand,:model,:error_code,"
         ":decision,:decision_reason,:safety_refused,:diagnosis_source,"
-        ":confidence,:created_at,:user_id)",
+        ":confidence,:status,:created_at,:user_id)",
         {
             **session,
             "user_id": user_id,
@@ -64,7 +64,9 @@ def _persist(session: dict, conn, user_id) -> dict:
     )
     steps = session.pop("steps")
     session["steps"] = []
-    for i, (content, manual, section) in enumerate(steps, start=1):
+    for i, item in enumerate(steps, start=1):
+        content, manual, section = item[:3]
+        chunk_id, citation_text = item[3:] if len(item) == 5 else (None, None)
         step = {
             "id": str(uuid.uuid4()),
             "session_id": session["id"],
@@ -72,27 +74,36 @@ def _persist(session: dict, conn, user_id) -> dict:
             "content": content,
             "citation_manual": manual,
             "citation_section": section,
+            "citation_chunk_id": chunk_id,
+            "citation_text": citation_text,
             "feedback": None,
         }
-        session.setdefault("steps", []).append(step)
+        session["steps"].append(step)
         conn.execute(
-            "INSERT INTO steps VALUES (:id,:session_id,:idx,:content,"
-            ":citation_manual,:citation_section,:feedback)",
+            "INSERT INTO steps (id,session_id,idx,content,citation_manual,"
+            "citation_section,citation_chunk_id,citation_text,feedback) "
+            "VALUES (:id,:session_id,:idx,:content,:citation_manual,"
+            ":citation_section,:citation_chunk_id,:citation_text,:feedback)",
             step,
         )
     return session
 
 
 def _mock_session(image_bytes: bytes, filename: str | None) -> dict:
-    return dict(mock_data.route(filename, image_bytes))
+    session = mock_data.route(filename, image_bytes)
+    if session is None:
+        raise AnalysisError(
+            "无法可靠识别设备，请补拍整机、铭牌或错误码", status_code=422
+        )
+    return dict(session)
 
 
 def _vision_session(vision: providers.VisionResult, provider: str) -> dict:
     return {
-        "device_category": vision.device_category,
-        "brand": vision.brand,
-        "model": vision.model,
-        "error_code": vision.error_code,
+        "device_category": retrieval.normalize_category(vision.device_category),
+        "brand": (vision.brand or "").strip() or None,
+        "model": (vision.model or "").strip() or None,
+        "error_code": _normalize_code(vision.error_code),
         "diagnosis_source": provider,
         "confidence": vision.confidence,
     }
@@ -107,14 +118,24 @@ def _without_steps(session: dict, reason: str) -> dict:
     }
 
 
-def _citation_key(manual: str, section: str) -> tuple[str, str]:
-    manual = manual.strip()
-    section = section.strip()
-    if manual.startswith("《") and "》" in manual:
-        title, suffix = manual[1:].split("》", 1)
-        if not suffix.strip() or suffix.strip() == section:
-            manual = title.strip()
-    return manual, section
+def _refusal_session(
+    session: dict, verdict: safety_gate.SafetyVerdict, language: str
+) -> dict:
+    localized = safety_gate.localize(verdict, language)
+    return {
+        **session,
+        "decision": "refused",
+        "decision_reason": f"{localized.reason}{localized.advice}",
+        "safety_refused": True,
+        "steps": [],
+    }
+
+
+def _source_label(chunk: dict) -> str:
+    section = chunk.get("section") or ""
+    if not section or section == f"PDF page {chunk['page']}":
+        return f"PDF p.{chunk['page']} · {chunk['id']}"
+    return f"{section} · PDF p.{chunk['page']} · {chunk['id']}"
 
 
 def _generated_session(
@@ -122,25 +143,34 @@ def _generated_session(
     gen: providers.GenerationResult,
     chunks: list[dict],
 ) -> dict:
-    valid = {
-        _citation_key(c["manual"], c["section"]): (c["manual"], c["section"])
-        for c in chunks
-    }
+    by_id = {chunk["id"]: chunk for chunk in chunks}
     steps = []
-    for step in gen.steps:
-        citation = valid.get(
-            _citation_key(step.citation_manual, step.citation_section)
+    for generated in gen.steps:
+        chunk = by_id.get(generated.citation_chunk_id)
+        content = generated.content.strip()
+        if chunk is None or not content:
+            continue
+        if safety_gate.check(
+            session["device_category"], session.get("brand"), content
+        ).refused:
+            continue
+        steps.append(
+            (
+                content,
+                chunk["title"],
+                _source_label(chunk),
+                chunk["id"],
+                chunk["content"],
+            )
         )
-        if citation:
-            steps.append((step.content, *citation))
     if gen.decision == "diy" and not steps:
         return _without_steps(
-            session, "生成内容未通过手册引用校验，已停止提供自行维修步骤。"
+            session, "生成内容未通过手册引用或安全校验，已停止提供自行维修步骤。"
         )
     return {
         **session,
         "decision": gen.decision,
-        "decision_reason": gen.decision_reason,
+        "decision_reason": gen.decision_reason.strip(),
         "steps": steps,
     }
 
@@ -172,28 +202,44 @@ def analyze_image(
             "无法可靠识别设备，请补拍整机、铭牌或错误码", status_code=422
         )
 
+    session = _vision_session(vision, provider)
     verdict = safety_gate.check(
-        vision.device_category, vision.brand, *vision.visible_faults
+        vision.device_category,
+        vision.brand,
+        vision.error_code,
+        *vision.visible_faults,
     )
     if verdict.refused:
         return _persist(
-            {
-                **_vision_session(vision, provider),
-                "decision": "refused",
-                "decision_reason": f"{verdict.reason}{verdict.advice}",
-                "safety_refused": True,
-                "steps": [],
-            },
+            _refusal_session(session, verdict, language), conn, user_id
+        )
+    if vision.confidence < 0.55:
+        return _persist(
+            _without_steps(
+                session,
+                "图片识别置信度较低，无法可靠确认设备或故障。请补拍铭牌或错误码，不提供猜测性维修步骤。",
+            ),
             conn,
             user_id,
         )
 
-    query = (
-        f"{vision.device_category} {vision.brand or ''} {vision.error_code or ''} "
-        f"{' '.join(vision.visible_faults)}"
+    query = " ".join(
+        value
+        for value in [
+            session["device_category"],
+            vision.brand,
+            vision.model,
+            vision.error_code,
+            *vision.visible_faults,
+        ]
+        if value
     )
-    chunks = retrieval.search(query, vision.device_category, vision.error_code)
-    session = _vision_session(vision, provider)
+    chunks = retrieval.search(
+        query,
+        session["device_category"],
+        session["error_code"],
+        brand=vision.brand or "",
+    )
     if not chunks:
         return _persist(
             _without_steps(
@@ -218,40 +264,32 @@ def diagnose_manual(
     language: str = "zh",
 ) -> dict:
     source = provider or "mock"
+    code = _normalize_code(error_code) or ""
+    session = {
+        "device_category": "unknown",
+        "brand": brand.strip() or None,
+        "model": None,
+        "error_code": code,
+        "diagnosis_source": source,
+        "confidence": None,
+    }
     verdict = safety_gate.check(brand, error_code)
     if verdict.refused:
         return _persist(
-            {
-                "device_category": "unknown",
-                "brand": brand,
-                "model": None,
-                "error_code": error_code,
-                "decision": "refused",
-                "decision_reason": f"{verdict.reason}{verdict.advice}",
-                "safety_refused": True,
-                "diagnosis_source": source,
-                "steps": [],
-            },
-            conn,
-            user_id,
+            _refusal_session(session, verdict, language), conn, user_id
         )
 
     if provider is None:
         return _persist(
             _mock_session(
-                f"{brand}{error_code}".encode(),
-                "e24" if error_code.strip().lower() == "e24" else "",
+                f"{brand}{code}".encode(),
+                "e24" if code.lower() == "e24" else "",
             ),
             conn,
             user_id,
         )
 
-    vision = providers.VisionResult(
-        device_category="unknown", brand=brand, error_code=error_code
-    )
-    session = _vision_session(vision, provider)
-    session["confidence"] = None
-    chunks = retrieval.search(f"{brand} {error_code}", None, error_code)
+    chunks = retrieval.search(f"{brand} {code}", None, code, brand=brand)
     if not chunks:
         return _persist(
             _without_steps(
@@ -260,6 +298,9 @@ def diagnose_manual(
             conn,
             user_id,
         )
+    vision = providers.VisionResult(
+        device_category="unknown", brand=brand, error_code=code
+    )
     try:
         gen = providers.generate(vision, chunks, provider, language)
     except providers.ProviderError as exc:

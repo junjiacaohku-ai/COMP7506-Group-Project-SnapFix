@@ -33,8 +33,7 @@ class VisionResult(BaseModel):
 
 class GeneratedStep(BaseModel):
     content: str
-    citation_manual: str
-    citation_section: str
+    citation_chunk_id: str
 
 
 class GenerationResult(BaseModel):
@@ -86,12 +85,13 @@ def _generation_prompt(
     vision: VisionResult, chunks: list[dict], language: str
 ) -> str:
     corpus = "\n\n".join(
-        f"[{i}] 《{c['manual']}》{c['section']}\n{c['text']}"
-        for i, c in enumerate(chunks)
+        f"[chunk_id={c['id']}] 《{c['title']}》{c['section']} "
+        f"PDF p.{c['page']}\n{c['content']}"
+        for c in chunks
     )
     output_language = "English" if language == "en" else "简体中文"
     return f"""你是家电维修指导生成器。用户设备：{vision.device_category}，品牌：{vision.brand or "未知"}，
-错误码：{vision.error_code or "无"}，可见现象：{",".join(vision.visible_faults) or "无"}。
+型号：{vision.model or "未知"}，错误码：{vision.error_code or "无"}，可见现象：{",".join(vision.visible_faults) or "无"}。
 
 只能依据以下手册片段生成修理步骤，严禁编造片段之外的操作、工具或结论：
 {corpus}
@@ -99,10 +99,10 @@ def _generation_prompt(
 只输出一个 JSON 对象，不要使用 Markdown：
 decision：diy（有充分手册依据且适合非破坏性自修）/ landlord（找房东）/ professional（找专业人员）。
 decision_reason：一句话，区分可见现象与未经确认的可能原因。
-steps：0-6 步，每步包含 content、citation_manual、citation_section。
-citation_manual 和 citation_section 必须与上述片段逐字一致。
-如果没有充分依据提供安全步骤，steps 返回空数组，decision 使用 professional。
-decision_reason 和 steps.content 必须使用{output_language}；手册名和章节保持原文。"""
+steps：0-6 步，每步包含 content 和 citation_chunk_id。
+citation_chunk_id 必须逐字取自上述片段，不得使用手册名或章节代替。
+如果型号未知且操作具有型号特异性，或没有充分依据提供安全步骤，decision 使用 professional，steps 返回空数组。
+decision_reason 和 steps.content 必须使用{output_language}；引用只使用 chunk ID。"""
 
 
 def _gemini_extract(

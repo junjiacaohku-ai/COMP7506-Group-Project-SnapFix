@@ -1,13 +1,14 @@
-"""SQLite 持久化:账号、第三方身份、访问令牌与个人诊断档案。
-
-stdlib sqlite3,零额外依赖;数据库文件为 server/snapfix.db(已 gitignore)。
-"""
+"""SQLite 持久化：账号、诊断档案、真实语料与报修草稿。"""
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "snapfix.db"
+DB_PATH = Path(
+    os.environ.get("SNAPFIX_DB", str(Path(__file__).parent / "snapfix.db"))
+)
+DATA_PATH = Path(__file__).parent / "data"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     safety_refused INTEGER DEFAULT 0,
     diagnosis_source TEXT NOT NULL DEFAULT 'mock',
     confidence REAL,
+    status TEXT NOT NULL DEFAULT 'investigating',
     created_at TEXT,
     user_id TEXT REFERENCES users(id) ON DELETE CASCADE
 );
@@ -63,7 +65,15 @@ CREATE TABLE IF NOT EXISTS steps (
     session_id TEXT REFERENCES sessions(id) ON DELETE CASCADE,
     idx INTEGER, content TEXT,
     citation_manual TEXT, citation_section TEXT,
+    citation_chunk_id TEXT, citation_text TEXT,
     feedback TEXT
+);
+CREATE TABLE IF NOT EXISTS report_drafts (
+    session_id TEXT REFERENCES sessions(id) ON DELETE CASCADE,
+    lang TEXT NOT NULL,
+    content TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (session_id, lang)
 );
 """
 
@@ -103,24 +113,38 @@ def _migrate_users_for_oauth(conn: sqlite3.Connection) -> None:
 
 
 def init() -> None:
+    from corpus_store import import_corpus
+
     with connect() as conn:
         conn.executescript(_SCHEMA)
         _migrate_users_for_oauth(conn)
-        columns = {
+        session_columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(sessions)")
         }
-        if "user_id" not in columns:
+        if "user_id" not in session_columns:
             conn.execute(
                 "ALTER TABLE sessions ADD COLUMN user_id TEXT "
                 "REFERENCES users(id) ON DELETE CASCADE"
             )
-        if "diagnosis_source" not in columns:
+        if "diagnosis_source" not in session_columns:
             conn.execute(
                 "ALTER TABLE sessions ADD COLUMN diagnosis_source TEXT "
                 "NOT NULL DEFAULT 'mock'"
             )
-        if "confidence" not in columns:
+        if "confidence" not in session_columns:
             conn.execute("ALTER TABLE sessions ADD COLUMN confidence REAL")
+        if "status" not in session_columns:
+            conn.execute(
+                "ALTER TABLE sessions ADD COLUMN status TEXT "
+                "NOT NULL DEFAULT 'investigating'"
+            )
+        step_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(steps)")
+        }
+        if "citation_chunk_id" not in step_columns:
+            conn.execute("ALTER TABLE steps ADD COLUMN citation_chunk_id TEXT")
+        if "citation_text" not in step_columns:
+            conn.execute("ALTER TABLE steps ADD COLUMN citation_text TEXT")
         token_columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(auth_tokens)")
         }
@@ -136,3 +160,4 @@ def init() -> None:
             CREATE INDEX IF NOT EXISTS idx_identities_user
                 ON auth_identities(user_id);
         """)
+    import_corpus(DB_PATH, DATA_PATH)

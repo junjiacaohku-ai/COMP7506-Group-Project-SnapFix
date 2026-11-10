@@ -1,84 +1,180 @@
-"""手册检索:轻量 BM25 变体,单机语料规模下足够。
+"""BE-2 retriever based on the D-line reference implementation."""
 
-错误码精确命中给大额加权;中英文按字符/词混合切分(语料以中文为主)。
-"""
-from __future__ import annotations
-
-import json
 import math
 import re
-from pathlib import Path
+import unicodedata
 
-_CORPUS_PATH = Path(__file__).parent / "corpus" / "manuals.json"
-
-_chunks: list[dict] | None = None
+from rank_bm25 import BM25Okapi
 
 
-def _load() -> list[dict]:
-    global _chunks
-    if _chunks is None:
-        data = json.loads(_CORPUS_PATH.read_text(encoding="utf-8"))
-        _chunks = [
-            {
-                "manual": m["title"],
-                "brand": m.get("brand"),
-                "category": m["category"],
-                "section": c["section"],
-                "text": c["text"],
-            }
-            for m in data["manuals"]
-            for c in m["chunks"]
-        ]
-    return _chunks
+ALIASES = {
+    "博世": "bosch",
+    "普联": "tp-link",
+    "tplink": "tp-link",
+    "宜家": "ikea",
+    "松下": "panasonic",
+}
+
+CATEGORY_ALIASES = {
+    "ikea_furniture": "furniture",
+}
+
+EXPANSIONS = {
+    "排水": "drain drainage waste water",
+    "橙灯": "orange led",
+    "红灯": "led internet",
+    "断网": "internet connection",
+    "重启": "reboot restart",
+    "防倾倒": "tip over wall",
+    "墙体固定": "wall attachment",
+    "螺丝": "screws",
+    "微波炉": "microwave",
+    "不加热": "not heating",
+    "维修": "repair",
+    "专业人员": "qualified technician",
+    "燃气": "gas",
+    "热水器": "water heater",
+    "漏气": "leak",
+}
 
 
-def _tokenize(text: str) -> list[str]:
-    text = text.lower()
-    latin = re.findall(r"[a-z0-9]+", text)
-    cjk = re.findall(r"[一-鿿]", text)
-    bigrams = [a + b for a, b in zip(cjk, cjk[1:])]
-    return latin + cjk + bigrams
+def normalize_brand(value):
+    value = unicodedata.normalize("NFKC", value or "").strip().lower()
+    return ALIASES.get(value, value)
 
 
-def search(query: str, category: str | None = None, error_code: str | None = None,
-           top_k: int = 4) -> list[dict]:
-    """按相关性返回手册片段;类别匹配优先,错误码精确命中大加权。"""
-    chunks = _load()
-    if category:
-        preferred = [c for c in chunks if c["category"] == category]
-        pool = preferred or chunks
-    else:
-        pool = chunks
+def normalize_category(value):
+    value = unicodedata.normalize("NFKC", value or "").strip().lower()
+    return CATEGORY_ALIASES.get(value, value)
 
-    q_tokens = _tokenize(query)
-    code = (error_code or "").strip().lower()
 
-    scored = []
-    for c in pool:
-        tokens = _tokenize(c["text"] + " " + c["section"])
-        tf: dict[str, int] = {}
-        for t in tokens:
-            tf[t] = tf.get(t, 0) + 1
-        score = sum(math.log(1 + tf.get(t, 0)) for t in set(q_tokens))
-        if code and code in (c["text"] + c["section"]).lower():
-            score += 10.0
-        scored.append((score, c))
+def tokens(value, expand=False):
+    value = unicodedata.normalize("NFKC", value).lower()
+    value = re.sub(r"\be\s*:\s*(\d+)\b", r"e\1", value)
+    if expand:
+        value += " " + " ".join(
+            translation
+            for word, translation in EXPANSIONS.items()
+            if word in value
+        )
+    return re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]", value)
 
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [c for s, c in scored[:top_k] if s > 0]
+
+class Retriever:
+    def __init__(self, rows, *, category_weight=3.0, error_code_weight=3.0):
+        self.category_weight = float(category_weight)
+        self.error_code_weight = float(error_code_weight)
+        if not math.isfinite(self.category_weight) or self.category_weight < 0:
+            raise ValueError("category_weight must be finite and >= 0")
+        if not math.isfinite(self.error_code_weight) or self.error_code_weight < 1:
+            raise ValueError("error_code_weight must be finite and >= 1")
+        self.rows = rows
+        self.words = [tokens(row["content"]) for row in rows]
+        self.index = BM25Okapi(self.words) if rows else None
+
+    def search(
+        self,
+        query,
+        *,
+        category="",
+        category_hint="",
+        brand="",
+        error_code="",
+        manual_id="",
+        limit=3,
+    ):
+        if not self.index or limit <= 0 or not query.strip():
+            return []
+        category = normalize_category(category)
+        category_hint = normalize_category(category_hint)
+        brand = normalize_brand(brand)
+        query_words = tokens(query, expand=True)
+        code = "".join(tokens(error_code))
+        if code:
+            query_words = [word for word in query_words if word != code]
+            query_words.append(code)
+        base_scores = self.index.get_scores(query_words)
+        code_scores = self.index.get_scores([code]) if code else [0.0] * len(self.rows)
+        results = []
+        for row, words, base, code_score in zip(
+            self.rows, self.words, base_scores, code_scores,
+        ):
+            row_category = normalize_category(row.get("device_category", ""))
+            if manual_id and row["manual_id"] != manual_id:
+                continue
+            if category and row_category != category:
+                continue
+            if brand and normalize_brand(row.get("brand", "")) != brand:
+                continue
+            if code and code not in words:
+                continue
+            if not set(query_words).intersection(words):
+                continue
+            category_bonus = (
+                self.category_weight
+                if category_hint and row_category == category_hint
+                else 0.0
+            )
+            error_code_extra = (self.error_code_weight - 1) * float(code_score)
+            score = float(base) + category_bonus + error_code_extra
+            results.append({
+                **row,
+                "score": score,
+                "score_detail": {
+                    "base_bm25": float(base),
+                    "category_bonus": category_bonus,
+                    "error_code_extra": error_code_extra,
+                },
+            })
+        results.sort(key=lambda row: (-row["score"], row["id"]))
+        return results[:limit]
+
+
+def search(
+    query: str,
+    category: str | None = None,
+    error_code: str | None = None,
+    top_k: int = 4,
+    brand: str = "",
+) -> list[dict]:
+    from db import DB_PATH
+    from retrieval_service import search_manuals
+
+    normalized = normalize_category(category or "")
+    return search_manuals(
+        DB_PATH,
+        query,
+        category=normalized,
+        category_hint=normalized,
+        brand=brand,
+        error_code=error_code or "",
+        limit=top_k,
+    )
 
 
 def all_manuals() -> list[dict]:
-    seen: dict[str, dict] = {}
-    for c in _load():
-        manual = seen.setdefault(
-            c["manual"],
+    from corpus_store import read_chunks
+    from db import DB_PATH
+
+    manuals: dict[str, dict] = {}
+    for chunk in read_chunks(DB_PATH):
+        manual = manuals.setdefault(
+            chunk["manual_id"],
             {
-                "title": c["manual"],
-                "category": c["category"],
-                "brand": c.get("brand"),
+                "title": chunk["title"],
+                "category": chunk["device_category"],
+                "brand": chunk.get("brand"),
+                "source_url": chunk["source_url"],
                 "sections": [],
             },
         )
-        manual["sections"].append({"section": c["section"], "text": c["text"]})
-    return list(seen.values())
+        section = chunk.get("section") or f"PDF page {chunk['page']}"
+        manual["sections"].append(
+            {
+                "section": section,
+                "page": chunk["page"],
+                "chunk_id": chunk["id"],
+                "text": chunk["content"],
+            }
+        )
+    return list(manuals.values())

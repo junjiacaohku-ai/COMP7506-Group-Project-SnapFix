@@ -101,6 +101,16 @@ class ToolboxPageState extends State<ToolboxPage> {
                     fontSize: 13,
                   ),
                 ),
+                if (manual.sourceUrl?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    manual.sourceUrl!,
+                    style: TextStyle(
+                      color: sheetContext.colors.secondary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Text(
                   sheetContext.tr('来源章节与原文摘要'),
@@ -128,7 +138,8 @@ class ToolboxPageState extends State<ToolboxPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              sheetContext.tr(section.section),
+                              '${sheetContext.tr(section.section)}'
+                              '${section.page == null ? '' : ' · PDF p.${section.page}'}',
                               style: TextStyle(
                                 color: sheetContext.colors.primary,
                                 fontSize: 12,

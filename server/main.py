@@ -58,7 +58,8 @@ def _row_to_session(row, conn) -> dict:
     s["steps"] = [
         dict(r)
         for r in conn.execute(
-            "SELECT id,idx,content,citation_manual,citation_section,feedback "
+            "SELECT id,idx,content,citation_manual,citation_section,"
+            "citation_chunk_id,citation_text,feedback "
             "FROM steps WHERE session_id=? ORDER BY idx",
             (s["id"],),
         )
@@ -116,6 +117,15 @@ class FeedbackRequest(BaseModel):
 
 class ReportRequest(BaseModel):
     lang: str = "zh"
+
+
+class StatusRequest(BaseModel):
+    status: str
+
+
+class ReportDraftRequest(BaseModel):
+    lang: str = "zh"
+    content: str
 
 
 @app.get("/api/health")
@@ -386,20 +396,81 @@ def step_feedback(
         return _get(session_id, conn, user["id"])
 
 
+@app.post("/api/sessions/{session_id}/status")
+def update_status(
+    session_id: str, req: StatusRequest, user: dict = Depends(current_user)
+):
+    if req.status not in {"investigating", "awaiting_repair", "resolved"}:
+        raise HTTPException(status_code=400, detail="invalid status")
+    with db.connect() as conn:
+        _get(session_id, conn, user["id"])
+        conn.execute(
+            "UPDATE sessions SET status=? WHERE id=?", (req.status, session_id)
+        )
+        return _get(session_id, conn, user["id"])
+
+
+@app.put("/api/sessions/{session_id}/report")
+def save_report_draft(
+    session_id: str, req: ReportDraftRequest, user: dict = Depends(current_user)
+):
+    content = req.content.strip()
+    if req.lang not in {"zh", "en"}:
+        raise HTTPException(status_code=400, detail="invalid language")
+    if not content or len(content) > 20000:
+        raise HTTPException(status_code=400, detail="invalid report content")
+    from datetime import datetime, timezone
+
+    with db.connect() as conn:
+        _get(session_id, conn, user["id"])
+        conn.execute(
+            "INSERT INTO report_drafts (session_id,lang,content,updated_at) "
+            "VALUES (?,?,?,?) ON CONFLICT(session_id,lang) DO UPDATE SET "
+            "content=excluded.content,updated_at=excluded.updated_at",
+            (
+                session_id,
+                req.lang,
+                content,
+                datetime.now(timezone.utc).isoformat(),
+            ),
+        )
+    return {"lang": req.lang, "content": content}
+
+
 @app.post("/api/sessions/{session_id}/report")
 def generate_report(
-    session_id: str, req: ReportRequest, user: dict = Depends(current_user)
+    session_id: str,
+    req: ReportRequest,
+    user: dict = Depends(current_user),
+    reset: bool = False,
 ):
     if req.lang not in {"zh", "en"}:
         raise HTTPException(status_code=400, detail="invalid language")
     with db.connect() as conn:
         s = _get(session_id, conn, user["id"])
+        if reset:
+            conn.execute(
+                "DELETE FROM report_drafts WHERE session_id=? AND lang=?",
+                (session_id, req.lang),
+            )
+        else:
+            draft = conn.execute(
+                "SELECT content FROM report_drafts WHERE session_id=? AND lang=?",
+                (session_id, req.lang),
+            ).fetchone()
+            if draft:
+                return {"lang": req.lang, "content": draft["content"]}
     devices = {
         "washing_machine": ("洗衣机", "Washing machine"),
+        "dishwasher": ("洗碗机", "Dishwasher"),
         "router": ("路由器", "Router"),
         "microwave": ("微波炉", "Microwave"),
         "ikea_furniture": ("IKEA 家具", "IKEA furniture"),
+        "furniture": ("家具", "Furniture"),
         "water_heater": ("热水器", "Water heater"),
+        "electric_water_heater": ("电热水器", "Electric water heater"),
+        "gas_water_heater": ("燃气热水器", "Gas water heater"),
+        "unknown": ("设备", "Appliance"),
     }
     device = devices.get(
         s["device_category"], (s["device_category"], s["device_category"])
@@ -415,6 +486,14 @@ def generate_report(
         "微波炉内部高压电容断电后仍可致命,属于高危类目,不提供任何拆解步骤。": "High-risk microwave fault; no DIY diagnosis provided.",
         "热水器属房东配置,内部维修责任在房东;可先自行尝试复位键。": "Possible water heater fault requiring landlord inspection.",
     }.get(s["decision_reason"])
+    reason_text = s["decision_reason"] or ""
+    if (
+        reason_en is None
+        and reason_text
+        and s["diagnosis_source"] != "mock"
+        and not any("\u4e00" <= char <= "\u9fff" for char in reason_text)
+    ):
+        reason_en = reason_text
     if req.lang == "en":
         tried = ", ".join(
             f"step {st['idx']}" for st in s["steps"] if st["feedback"] == "done"

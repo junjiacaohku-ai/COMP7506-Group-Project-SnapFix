@@ -1,12 +1,10 @@
 """Mock 确定性演示数据:覆盖 PRD §12 的 6 个验收场景。
 
-mock 模式(无可用真实模型配置)时,拍照诊断按以下优先级路由到场景:
-文件名关键词 → 演示照片均值色指纹(经相册重编码仍稳定) → 内容哈希轮换。
-同一张图永远得到同一结果。
+mock 模式(无可用真实模型配置)时,只通过文件名关键词或演示照片指纹匹配场景。
+未知图片明确拒绝,不生成无关结果。
 """
 from __future__ import annotations
 
-import hashlib
 import io
 
 from PIL import Image
@@ -91,18 +89,14 @@ _KEYWORDS = {
 }
 
 
-def route(filename: str | None, image_bytes: bytes) -> dict:
-    """文件名关键词优先;其次演示照片均值色指纹;最后内容哈希确定性轮换。"""
+def route(filename: str | None, image_bytes: bytes) -> dict | None:
+    """只匹配明确的演示场景；未知图片不生成无关诊断。"""
     name = (filename or "").lower()
     for key, words in _KEYWORDS.items():
         if any(w in name for w in words):
             return MOCK_SCENARIOS[key]
     matched = _match_photo(image_bytes)
-    if matched:
-        return MOCK_SCENARIOS[matched]
-    digest = int(hashlib.md5(image_bytes).hexdigest(), 16)
-    safe = ["router", "washer", "ikea", "water_heater"]  # 拒答场景不进哈希轮换
-    return MOCK_SCENARIOS[safe[digest % len(safe)]]
+    return MOCK_SCENARIOS[matched] if matched else None
 
 
 # demo-photos/ 四张合成图的均值色指纹(Pillow 重采样 64x64 后实测)

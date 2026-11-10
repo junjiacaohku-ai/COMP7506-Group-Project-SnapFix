@@ -50,6 +50,74 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
+  Future<void> _changeStatus(String status) async {
+    if (_session.status == status) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.tr('更改维修状态？')),
+        content: Text(
+          dialogContext.tr('将此记录标记为{status}？', {
+            'status': dialogContext.tr(repairStatusLabel(status)),
+          }),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(dialogContext.tr('取消')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(dialogContext.tr('确认')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final updated = await widget.api.updateStatus(_session.id, status);
+      if (mounted) setState(() => _session = updated);
+    } catch (_) {
+      if (mounted) showAppToast(context, context.tr('状态更新失败，请稍后重试'));
+    }
+  }
+
+  Widget _statusCard() {
+    return SurfaceCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.tr('维修状态'),
+            style: TextStyle(
+              color: context.colors.secondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final status in const [
+                'investigating',
+                'awaiting_repair',
+                'resolved',
+              ])
+                ChoiceChip(
+                  label: Text(context.tr(repairStatusLabel(status))),
+                  selected: _session.status == status,
+                  onSelected: (_) => _changeStatus(status),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showReport() {
     showModalBottomSheet<void>(
       context: context,
@@ -145,6 +213,8 @@ class _ResultPageState extends State<ResultPage> {
             _DeviceCard(session: _session),
             const SizedBox(height: 12),
             _DecisionCard(session: _session),
+            const SizedBox(height: 12),
+            _statusCard(),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -499,26 +569,28 @@ class _DecisionCard extends StatelessWidget {
                 child: Icon(style.icon, color: style.color, size: 24),
               ),
               const SizedBox(width: 13),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.tr('维修建议'),
-                    style: TextStyle(
-                      color: context.colors.secondary,
-                      fontSize: 11,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr('维修建议'),
+                      style: TextStyle(
+                        color: context.colors.secondary,
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    context.tr(style.label),
-                    style: TextStyle(
-                      color: style.color,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                    const SizedBox(height: 3),
+                    Text(
+                      context.tr(style.label),
+                      style: TextStyle(
+                        color: style.color,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -657,9 +729,13 @@ class _StepCard extends StatelessWidget {
                     ),
                     if (step.citationManual.isNotEmpty) ...[
                       const SizedBox(height: 13),
-                      _Citation(
-                        manual: step.citationManual,
-                        section: step.citationSection,
+                      KeyedSubtree(
+                        key: Key('citation-${step.id}'),
+                        child: _Citation(
+                          manual: step.citationManual,
+                          section: step.citationSection,
+                          text: step.citationText,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 15),
@@ -705,39 +781,90 @@ class _StepCard extends StatelessWidget {
   }
 }
 
-class _Citation extends StatelessWidget {
-  const _Citation({required this.manual, required this.section});
+class _Citation extends StatefulWidget {
+  const _Citation({required this.manual, required this.section, this.text});
 
   final String manual;
   final String section;
+  final String? text;
+
+  @override
+  State<_Citation> createState() => _CitationState();
+}
+
+class _CitationState extends State<_Citation> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final hasText = widget.text?.trim().isNotEmpty ?? false;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
         color: context.colors.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(
-            Icons.menu_book_outlined,
-            size: 15,
-            color: context.colors.primary,
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Text(
-              context.tr(manual) +
-                  (section.isEmpty ? '' : ' · ${context.tr(section)}'),
-              style: TextStyle(
-                color: context.colors.primary,
-                fontSize: 11,
-                height: 1.4,
-              ),
+          InkWell(
+            onTap: hasText
+                ? () => setState(() => _expanded = !_expanded)
+                : null,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.menu_book_outlined,
+                  size: 15,
+                  color: context.colors.primary,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    context.tr(widget.manual) +
+                        (widget.section.isEmpty
+                            ? ''
+                            : ' · ${context.tr(widget.section)}'),
+                    style: TextStyle(
+                      color: context.colors.primary,
+                      fontSize: 11,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                if (hasText)
+                  Icon(
+                    _expanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    color: context.colors.primary,
+                    size: 18,
+                  ),
+              ],
             ),
           ),
+          if (_expanded && hasText) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                context.tr('手册原文'),
+                style: TextStyle(
+                  color: context.colors.secondary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            SelectableText(
+              widget.text!,
+              style: TextStyle(
+                color: context.colors.text,
+                fontSize: 12,
+                height: 1.55,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -927,8 +1054,10 @@ class _ReportPane extends StatefulWidget {
 
 class _ReportPaneState extends State<_ReportPane>
     with AutomaticKeepAliveClientMixin {
-  String? _content;
+  late final TextEditingController _controller;
   String? _error;
+  bool _loading = true;
+  bool _saving = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -936,38 +1065,68 @@ class _ReportPaneState extends State<_ReportPane>
   @override
   void initState() {
     super.initState();
+    _controller = TextEditingController();
     _load();
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool reset = false}) async {
     setState(() {
-      _content = null;
+      _loading = true;
       _error = null;
     });
     try {
-      final content = await widget.api.report(widget.sessionId, widget.lang);
+      final content = await widget.api.report(
+        widget.sessionId,
+        widget.lang,
+        reset: reset,
+      );
       if (!mounted) return;
-      setState(() => _content = content);
+      setState(() {
+        _controller.text = content;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = '生成失败，请重试');
+      setState(() {
+        _error = '生成失败，请重试';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await widget.api.saveReport(
+        widget.sessionId,
+        widget.lang,
+        _controller.text,
+      );
+      if (mounted) showAppToast(context, context.tr('草稿已保存'));
+    } catch (_) {
+      if (mounted) showAppToast(context, context.tr('草稿保存失败，请重试'));
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _copy() async {
-    final content = _content;
-    if (content == null) return;
     showAppToast(context, context.tr('已复制到剪贴板'));
-    await Clipboard.setData(ClipboardData(text: content));
+    await Clipboard.setData(ClipboardData(text: _controller.text));
   }
 
   Future<void> _share() async {
-    final content = _content;
-    if (content == null) return;
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
-        text: content,
+        text: _controller.text,
         sharePositionOrigin: box == null
             ? null
             : box.localToGlobal(Offset.zero) & box.size,
@@ -993,8 +1152,7 @@ class _ReportPaneState extends State<_ReportPane>
         ),
       );
     }
-    final content = _content;
-    if (content == null) {
+    if (_loading) {
       return const Center(
         child: SizedBox(
           width: 30,
@@ -1016,19 +1174,24 @@ class _ReportPaneState extends State<_ReportPane>
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: context.colors.border),
               ),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  content,
-                  style: TextStyle(
-                    color: context.colors.text,
-                    fontSize: 14,
-                    height: 1.7,
-                  ),
+              child: TextField(
+                key: const Key('report-editor'),
+                controller: _controller,
+                minLines: 8,
+                maxLines: null,
+                expands: false,
+                decoration: InputDecoration.collapsed(
+                  hintText: context.tr('编辑报修内容'),
+                ),
+                style: TextStyle(
+                  color: context.colors.text,
+                  fontSize: 14,
+                  height: 1.7,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1049,7 +1212,22 @@ class _ReportPaneState extends State<_ReportPane>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: _saving ? null : () => _load(reset: true),
+                  child: Text(context.tr('重置模板')),
+                ),
+              ),
+              Expanded(
+                child: TextButton(
+                  onPressed: _saving ? null : _save,
+                  child: Text(context.tr(_saving ? '保存中' : '保存草稿')),
+                ),
+              ),
+            ],
+          ),
           Row(
             children: [
               Expanded(

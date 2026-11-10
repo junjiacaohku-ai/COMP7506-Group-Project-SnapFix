@@ -321,12 +321,42 @@ class ApiClient {
     return Session.fromJson(json as Map<String, dynamic>);
   }
 
-  Future<String> report(String sessionId, String lang) async {
+  Future<Session> updateStatus(String sessionId, String status) async {
     final json = await _send(
       () => _client.post(
-        _uri('/api/sessions/$sessionId/report'),
+        _uri('/api/sessions/$sessionId/status'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'status': status}),
+      ),
+    );
+    return Session.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<String> report(
+    String sessionId,
+    String lang, {
+    bool reset = false,
+  }) async {
+    final json = await _send(
+      () => _client.post(
+        _uri('/api/sessions/$sessionId/report?reset=$reset'),
         headers: _jsonHeaders,
         body: jsonEncode({'lang': lang}),
+      ),
+    );
+    return (json as Map<String, dynamic>)['content'] as String;
+  }
+
+  Future<String> saveReport(
+    String sessionId,
+    String lang,
+    String content,
+  ) async {
+    final json = await _send(
+      () => _client.put(
+        _uri('/api/sessions/$sessionId/report'),
+        headers: _jsonHeaders,
+        body: jsonEncode({'lang': lang, 'content': content}),
       ),
     );
     return (json as Map<String, dynamic>)['content'] as String;

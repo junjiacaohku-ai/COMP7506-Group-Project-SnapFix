@@ -60,15 +60,24 @@ class LoginIdentity {
 }
 
 class ManualSection {
-  const ManualSection({required this.section, required this.text});
+  const ManualSection({
+    required this.section,
+    required this.text,
+    this.page,
+    this.chunkId,
+  });
 
   factory ManualSection.fromJson(Map<String, dynamic> json) => ManualSection(
     section: json['section'] as String? ?? '',
     text: json['text'] as String? ?? '',
+    page: json['page'] as int?,
+    chunkId: json['chunk_id'] as String?,
   );
 
   final String section;
   final String text;
+  final int? page;
+  final String? chunkId;
 }
 
 class ManualInfo {
@@ -77,12 +86,14 @@ class ManualInfo {
     required this.category,
     required this.sections,
     this.brand,
+    this.sourceUrl,
   });
 
   factory ManualInfo.fromJson(Map<String, dynamic> json) => ManualInfo(
     title: json['title'] as String,
     category: json['category'] as String,
     brand: json['brand'] as String?,
+    sourceUrl: json['source_url'] as String?,
     sections: [
       for (final section in json['sections'] as List? ?? const [])
         ManualSection.fromJson(section as Map<String, dynamic>),
@@ -92,6 +103,7 @@ class ManualInfo {
   final String title;
   final String category;
   final String? brand;
+  final String? sourceUrl;
   final List<ManualSection> sections;
 }
 
@@ -120,6 +132,8 @@ class RepairStep {
     required this.content,
     required this.citationManual,
     required this.citationSection,
+    this.citationChunkId,
+    this.citationText,
     this.feedback,
   });
 
@@ -129,6 +143,8 @@ class RepairStep {
     content: json['content'] as String,
     citationManual: json['citation_manual'] as String? ?? '',
     citationSection: json['citation_section'] as String? ?? '',
+    citationChunkId: json['citation_chunk_id'] as String?,
+    citationText: json['citation_text'] as String?,
     feedback: json['feedback'] as String?,
   );
 
@@ -137,6 +153,8 @@ class RepairStep {
   final String content;
   final String citationManual;
   final String citationSection;
+  final String? citationChunkId;
+  final String? citationText;
   String? feedback;
 }
 
@@ -154,6 +172,7 @@ class Session {
     required this.steps,
     required this.createdAt,
     this.confidence,
+    this.status = 'investigating',
   });
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -167,6 +186,7 @@ class Session {
     safetyRefused: json['safety_refused'] as bool? ?? false,
     diagnosisSource: json['diagnosis_source'] as String? ?? 'mock',
     confidence: (json['confidence'] as num?)?.toDouble(),
+    status: json['status'] as String? ?? 'investigating',
     steps: [
       for (final s in json['steps'] as List? ?? const [])
         RepairStep.fromJson(s as Map<String, dynamic>),
@@ -186,6 +206,7 @@ class Session {
   final bool safetyRefused;
   final String diagnosisSource;
   final double? confidence;
+  final String status;
   final List<RepairStep> steps;
   final DateTime createdAt;
 
@@ -194,20 +215,32 @@ class Session {
 
 String deviceCategoryLabel(String category) => switch (category) {
   'washing_machine' => '洗衣机',
+  'dishwasher' => '洗碗机',
   'router' => '路由器',
   'microwave' => '微波炉',
   'ikea_furniture' => 'IKEA 家具',
-  'water_heater' => '热水器',
+  'furniture' => '家具',
+  'water_heater' || 'electric_water_heater' || 'gas_water_heater' => '热水器',
+  'unknown' => '设备',
   _ => '其他',
 };
 
 IconData deviceCategoryIcon(String category) => switch (category) {
   'washing_machine' => Icons.local_laundry_service_outlined,
+  'dishwasher' => Icons.countertops_outlined,
   'router' => Icons.router_outlined,
   'microwave' => Icons.microwave_outlined,
-  'ikea_furniture' => Icons.handyman_outlined,
-  'water_heater' => Icons.water_drop_outlined,
+  'ikea_furniture' || 'furniture' => Icons.handyman_outlined,
+  'water_heater' ||
+  'electric_water_heater' ||
+  'gas_water_heater' => Icons.water_drop_outlined,
   _ => Icons.devices_other_outlined,
+};
+
+String repairStatusLabel(String status) => switch (status) {
+  'resolved' => '已解决',
+  'awaiting_repair' => '待维修',
+  _ => '排查中',
 };
 
 ({String label, Color color, IconData icon}) decisionStyle(

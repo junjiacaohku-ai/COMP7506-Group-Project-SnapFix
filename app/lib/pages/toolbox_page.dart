@@ -85,7 +85,7 @@ class ToolboxPageState extends State<ToolboxPage> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  manual.title,
+                  sheetContext.tr(manual.title),
                   style: TextStyle(
                     color: sheetContext.colors.text,
                     fontSize: 20,
@@ -128,7 +128,7 @@ class ToolboxPageState extends State<ToolboxPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              section.section,
+                              sheetContext.tr(section.section),
                               style: TextStyle(
                                 color: sheetContext.colors.primary,
                                 fontSize: 12,
@@ -181,8 +181,12 @@ class ToolboxPageState extends State<ToolboxPage> {
       final query = _query.trim().toLowerCase();
       return query.isEmpty ||
           manual.title.toLowerCase().contains(query) ||
+          context.tr(manual.title).toLowerCase().contains(query) ||
           (manual.brand ?? '').toLowerCase().contains(query) ||
-          deviceCategoryLabel(manual.category).contains(query);
+          context
+              .tr(deviceCategoryLabel(manual.category))
+              .toLowerCase()
+              .contains(query);
     }).toList();
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('手册资料库'))),
@@ -266,7 +270,7 @@ class ToolboxPageState extends State<ToolboxPage> {
                         ),
                       ),
                       title: Text(
-                        manual.title,
+                        context.tr(manual.title),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

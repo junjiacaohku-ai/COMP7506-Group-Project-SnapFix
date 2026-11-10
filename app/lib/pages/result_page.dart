@@ -729,7 +729,8 @@ class _Citation extends StatelessWidget {
           const SizedBox(width: 7),
           Expanded(
             child: Text(
-              '$manual${section.isEmpty ? '' : ' · $section'}',
+              context.tr(manual) +
+                  (section.isEmpty ? '' : ' · ${context.tr(section)}'),
               style: TextStyle(
                 color: context.colors.primary,
                 fontSize: 11,

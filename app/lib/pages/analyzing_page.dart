@@ -11,10 +11,16 @@ import '../ui.dart';
 import 'result_page.dart';
 
 class AnalyzingPage extends StatefulWidget {
-  const AnalyzingPage({super.key, required this.api, required this.start});
+  const AnalyzingPage({
+    super.key,
+    required this.api,
+    required this.start,
+    this.isPhotoDiagnosis = true,
+  });
 
   final ApiClient api;
   final Future<Session> Function() start;
+  final bool isPhotoDiagnosis;
 
   @override
   State<AnalyzingPage> createState() => _AnalyzingPageState();
@@ -77,7 +83,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      if (error.isQualityError) {
+      if (widget.isPhotoDiagnosis && error.isQualityError) {
         _showQualityDialog(error.message);
       } else {
         Navigator.of(context).pop(error.message);

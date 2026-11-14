@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "scope": "Offline integration/demo fixtures, not a real-fault recognition dataset. Filename selects mock diagnosis. Three Bosch views and three TP-Link views each share one source/device family. E24 in the photograph is not asserted.",
+  "version": 2,
+  "scope": "Current authenticated mock API fixtures, not a real-fault recognition dataset. Filenames explicitly select mock router/BILLY/microwave scenarios. Bosch exterior photos do not establish E24 and are unsupported in mock image mode; S2 uses user-supplied brand/error-code manual entry. Expected outcomes are replayed by server/tests/test_demo_alternatives.py.",
   "assets": [
     {
       "id": "router-01",
@@ -277,7 +277,7 @@
         "error_code": "E240"
       },
       "expected": {
-        "status": 200
+        "status": 422
       }
     },
     {
@@ -289,7 +289,7 @@
         "error_code": "E24"
       },
       "expected": {
-        "status": 200
+        "status": 422
       }
     },
     {
@@ -302,7 +302,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": false
     },
@@ -316,7 +316,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": false
     },
@@ -330,7 +330,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": false
     },
@@ -340,12 +340,8 @@
       "kind": "image",
       "asset": "e24-01",
       "expected": {
-        "status": 200,
-        "device_category": "dishwasher",
-        "brand": "Bosch",
-        "error_code": "E24",
-        "decision": "professional",
-        "model": null
+        "status": 422,
+        "unsupported_mock_scenario": true
       },
       "exercise_report": false
     },
@@ -355,12 +351,8 @@
       "kind": "image",
       "asset": "e24-02",
       "expected": {
-        "status": 200,
-        "device_category": "dishwasher",
-        "brand": "Bosch",
-        "error_code": "E24",
-        "decision": "professional",
-        "model": null
+        "status": 422,
+        "unsupported_mock_scenario": true
       },
       "exercise_report": false
     },
@@ -370,12 +362,8 @@
       "kind": "image",
       "asset": "e24-03",
       "expected": {
-        "status": 200,
-        "device_category": "dishwasher",
-        "brand": "Bosch",
-        "error_code": "E24",
-        "decision": "professional",
-        "model": null
+        "status": 422,
+        "unsupported_mock_scenario": true
       },
       "exercise_report": false
     },
@@ -386,7 +374,7 @@
       "asset": "billy-01",
       "expected": {
         "status": 200,
-        "device_category": "furniture",
+        "device_category": "ikea_furniture",
         "brand": "IKEA",
         "decision": "diy"
       },
@@ -399,7 +387,7 @@
       "asset": "billy-02",
       "expected": {
         "status": 200,
-        "device_category": "furniture",
+        "device_category": "ikea_furniture",
         "brand": "IKEA",
         "decision": "diy"
       },
@@ -412,7 +400,7 @@
       "asset": "billy-03",
       "expected": {
         "status": 200,
-        "device_category": "furniture",
+        "device_category": "ikea_furniture",
         "brand": "IKEA",
         "decision": "diy"
       },
@@ -536,7 +524,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": true
     },
@@ -550,7 +538,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": true
     },
@@ -564,7 +552,7 @@
         "device_category": "router",
         "brand": "TP-Link",
         "decision": "diy",
-        "model": null
+        "model": "Archer 系列"
       },
       "exercise_report": true
     }

@@ -12,10 +12,12 @@ AI-assisted appliance repair with manual evidence, safety guardrails, and biling
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.7-54C5F8?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.11+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Qwen3-VL](https://img.shields.io/badge/AI-Qwen3--VL-7B61C9)](https://www.alibabacloud.com/help/en/model-studio/qwen-vl-compatible-with-openai)
-[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
+[![Tests](https://img.shields.io/badge/Backend-81_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
 [![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/COMP7506-Group-Project-SnapFix?style=social)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/stargazers)
 
 <img src="docs/assets/snapfix-hero.png" alt="SnapFix product overview and real app screens" width="100%">
+
+The overview includes an earlier washer E24 screen that is now obsolete. Use the current [demo scenario table](#6-demo-scenarios) and [acceptance record](docs/zhang-fan-review.md) for verified behavior.
 
 [Overview](#overview) · [Features](#features) · [Architecture](#architecture) · [Quick Start](#quick-start) · [Evaluation](#evaluation) · [Limitations](#limitations)
 
@@ -152,7 +154,7 @@ Google sign-in is optional and hidden until OAuth Client IDs are supplied. Apple
 | Scenario | Input | Expected result |
 |---|---|---|
 | Router indicator | Known demo photo or filename containing `router` / `tplink` | TP-Link external troubleshooting with labelled demo sources |
-| Bosch E24 | Brand `Bosch`, code `E24` | Deterministic washer demonstration in mock mode; real corpus retrieval in online mode |
+| Bosch dishwasher E24 | Brand `Bosch`, code `E24` or `E:24` | Mock: professional referral, unknown model, no repair steps. Live: retrieve real manuals; evidence and safety checks determine the result |
 | IKEA BILLY | Known demo photo or filename containing `ikea` / `billy` | Assembly guidance and anti-tip warning |
 | Microwave | Known demo photo or filename containing `microwave` | Safety refusal, no DIY steps, repair-request entry |
 | Poor image | Dark, blurred, tiny, invalid, or oversized image | HTTP 422 with a localized retake explanation |
@@ -205,11 +207,11 @@ flutter test
 
 | Verification | Current result | What it does—and does not—establish |
 |---|---|---|
-| Backend regression | **46 passed** | Corpus, retrieval, safety, image quality, account isolation, status and drafts |
-| Flutter tests | **5 passed** | Model parsing and product interaction logic |
-| Flutter static analysis | **No issues found** | Static Dart quality, not device compatibility |
+| Backend regression | **81 passed**, reproduced 14 November 2026 | Corpus, retrieval, safety, image quality, account isolation, status and drafts |
+| Flutter tests | Previously reported: **5 passed**; two new error-flow tests added, not run | Model parsing and product interaction logic |
+| Flutter static analysis | Previously reported: **No issues found**; not rerun in this review | Static Dart quality, not device compatibility |
 | Image-quality variants | **26 controlled cases** | Dark/blur retake behavior, not diagnostic accuracy |
-| Real Qwen HTTP flows | **Router, microwave, Bosch E24 checked** | Live provider integration and source validation on those scenarios |
+| Real Qwen HTTP flows | Previously reported: router, microwave, Bosch E24; not rerun | Per-run evidence is not bundled; live acceptance remains open |
 | Manual corpus | **16 documents / 2,032 chunks** | Available evidence coverage, not universal appliance support |
 
 ### Validation principles
@@ -248,6 +250,8 @@ Camera permissions, system notifications, sharing, and OAuth should still receiv
 - [Project report PDF](docs/report/snapfix-report.pdf)
 - [Report LaTeX source](docs/report/snapfix-report.tex)
 - [Demo video script](docs/video-script.md)
+- [Existing demo video](docs/video/snapfix-full-demo.mp4) · [Bilingual narration](docs/video/narration-bilingual.md)
+- [Zhang Fan workstream review and acceptance record](docs/zhang-fan-review.md)
 - [Validation and reproduction guide](docs/validation.md)
 - [Manual source manifest](server/data/manifest.json)
 - [Public image attribution](docs/demo-assets/public/sources.json)
@@ -264,6 +268,8 @@ This integrated team mainline combines selected outputs from the original team w
 | **Zhu Yutaimin** | FE-1 scan & diagnosis | Flutter foundations, shared components, home, camera, preview and diagnosis flow |
 | **Yang Ruijia** | FE-2 guidance & archive | Step guidance, repair history, report interactions, visual design and video materials |
 | **Zhang Fan** | Data & content | Corpus ETL, demonstration scenarios, market research, acceptance records and attributed image assets |
+
+For this workstream, see the [file-by-file review and acceptance record](docs/zhang-fan-review.md). Corpus and asset checks are reproducible; live-provider and physical-device acceptance remain open. The review describes repository artifacts and does not infer individual authorship from the role table.
 
 Third-party manuals and photographs retain their respective source terms and licences.
 

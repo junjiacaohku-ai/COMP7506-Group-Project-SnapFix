@@ -1,0 +1,22 @@
+{
+  "source_commit": "08bb5fa1ecf673c2bf898e93919d4b0dec049681",
+  "date": "2026-11-14",
+  "command": "python corpus.py data/manifest.json <scratch>/chunks.json",
+  "results": [
+    {
+      "file": "server/data/chunks.json",
+      "sha256": "5a3a6f51714ea8137b637871173d3fc69d686997fa184e81cda1fd5811fb8d45",
+      "rebuild_byte_identical": true
+    },
+    {
+      "file": "server/data/manuals.json",
+      "sha256": "eb07a05619a3a60c87d1710ae0e14f174ae23171d47b535c80956b7f9039268e",
+      "rebuild_byte_identical": true
+    },
+    {
+      "file": "server/data/extraction-audit.json",
+      "sha256": "cb613b1e59bce55a58c62643dbdef5d906fc8d5a47bcdfedeba13229cb0e3c84",
+      "rebuild_byte_identical": true
+    }
+  ]
+}

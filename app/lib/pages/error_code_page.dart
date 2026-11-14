@@ -45,6 +45,7 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
         child: AnalyzingPage(
           api: widget.api,
           start: () => widget.api.diagnoseManual(brand, code),
+          isPhotoDiagnosis: false,
         ),
       ),
     );

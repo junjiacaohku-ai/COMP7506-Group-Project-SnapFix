@@ -89,13 +89,24 @@ def _persist(session: dict, conn, user_id) -> dict:
     return session
 
 
-def _mock_session(image_bytes: bytes, filename: str | None) -> dict:
+def _mock_session(
+    image_bytes: bytes, filename: str | None, language: str = "zh"
+) -> dict:
     session = mock_data.route(filename, image_bytes)
     if session is None:
         raise AnalysisError(
             "无法可靠识别设备，请补拍整机、铭牌或错误码", status_code=422
         )
-    return dict(session)
+    session = dict(session)
+    verdict = safety_gate.check(
+        session["device_category"],
+        session.get("brand"),
+        session["decision_reason"],
+        *(step[0] for step in session["steps"]),
+    )
+    if verdict.refused:
+        return _refusal_session(session, verdict, language)
+    return session
 
 
 def _vision_session(vision: providers.VisionResult, provider: str) -> dict:
@@ -185,7 +196,7 @@ def analyze_image(
 ) -> dict:
     mime_type = quality_gate(image_bytes)
     if provider is None:
-        return _persist(_mock_session(image_bytes, filename), conn, user_id)
+        return _persist(_mock_session(image_bytes, filename, language), conn, user_id)
 
     try:
         vision = providers.extract(image_bytes, provider, mime_type)
@@ -280,10 +291,27 @@ def diagnose_manual(
         )
 
     if provider is None:
+        # A code alone does not identify a brand, appliance or model. The only
+        # supported manual mock fixture is the explicitly labelled Bosch E24
+        # dishwasher scenario; never turn another brand into a Bosch washer.
+        if retrieval.normalize_brand(brand) != "bosch" or code != "E24":
+            raise AnalysisError(
+                "Offline demo supports only Bosch / E24 manual input; configure a live provider "
+                "or select an explicit demo scenario."
+                if language == "en"
+                else "演示模式仅支持 Bosch / E24 手动输入，请启用在线模型或使用明确的演示场景。",
+                status_code=422,
+            )
         return _persist(
-            _mock_session(
-                f"{brand}{code}".encode(),
-                "e24" if code.lower() == "e24" else "",
+            _without_steps(
+                {**session, "device_category": "dishwasher"},
+                "Offline demo: Bosch dishwasher E24. The model is unconfirmed; "
+                "check its label and matching manual, then contact Bosch service "
+                "or a qualified technician. No fault cause or repair procedure "
+                "has been verified."
+                if language == "en"
+                else "离线演示场景：Bosch 洗碗机 E24。型号未确认，请核对铭牌和对应说明书，"
+                "联系品牌售后或合资格维修人员；尚未验证故障原因，不提供拆修步骤。",
             ),
             conn,
             user_id,

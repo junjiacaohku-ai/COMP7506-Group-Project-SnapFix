@@ -1,10 +1,16 @@
 # SnapFix Demo Video Script
 
-**Course:** COMP7506 Group Project  
-**Target duration:** 2:50  
-**Hard limit:** Under 3:00  
-**Format:** Real simulator/app recording + short title cards + English narration and subtitles  
+**Course:** COMP7506 Group Project
+**Storyboard target duration:** 2:50
+**Hard limit:** Under 3:00
+**Format:** Real simulator/app recording + short title cards + English narration and subtitles
 **Version basis:** Current integrated team mainline with Qwen, real manual corpus, repair status, and editable reports
+
+## Existing edit and storyboard
+
+The repository already contains an [edited demo MP4](video/snapfix-full-demo.mp4) and a [bilingual narration draft](video/narration-bilingual.md). Checked on 14 November 2026: **128.633 seconds (2:09), 720 × 1566 portrait, H.264 video and AAC audio**. Full audio decoding found only zero-valued samples: **the current edit is silent and still needs narration**. Sampled frames do not show subtitles; final subtitle synchronization remains open.
+
+The timeline below is the **original 2:50 storyboard**, not a description of the current edit. The current edit starts with sign-in and ends with preferences; use the narration draft for its scene order. Re-record any scene affected by later code changes and keep the source commit and provider visible in the acceptance record. In particular, mock Bosch E24 now represents a dishwasher with an unknown model and professional referral, rather than the recorded DIY result shown in the existing edit.
 
 ## 1. Creative direction
 
@@ -74,6 +80,8 @@ Every real step has a source.
 > For an error-code query, SnapFix retrieves relevant sections from a real manual corpus using BM25. Each generated step must cite an exact chunk returned by retrieval. The user can inspect the original excerpt and PDF page, then track or undo progress. A missing or invalid citation means the step is withheld.
 
 **Production note:** 如果一次录屏无法同时拍清步骤和原文，可拆成两个连续镜头，不要缩小到无法阅读。
+
+**Acceptance note:** This scene requires a live result with validated evidence. Do not promise DIY solely from `Bosch / E24`; the mock result is a professional referral with no steps. If live evidence is insufficient, show the referral honestly or select a separately validated low-risk example.
 
 ---
 
@@ -172,11 +180,12 @@ Real AI. Real manuals. Clear next steps.
 - Use simple cuts and short zooms only when they improve readability.
 - Keep background music below speech and avoid copyrighted tracks.
 - Export as MP4 with H.264 video and AAC audio.
-- Recommended output: 1920×1080 or higher, with the phone UI remaining legible.
+- For a landscape export, aim for 1920×1080 or higher; for portrait, aim for 1080×1920. The existing 720×1566 edit needs a readability check at presentation size before accepting it.
 
 ## 5. Final acceptance checklist
 
-- [ ] Duration is **under 180 seconds**, with a target of approximately 170 seconds.
+- [x] Existing MP4 duration is **under 180 seconds** (128.633 seconds by container metadata); the storyboard target remains approximately 170 seconds.
+- [x] Existing MP4 video and audio tracks decode through the end without errors (3,859 video frames); audio is silent.
 - [ ] The video demonstrates real functionality, not only static mockups.
 - [ ] Qwen/mock claims match the mode used in each recording.
 - [ ] Photo diagnosis, manual evidence, safety refusal, reporting, and archive are all shown.
@@ -184,3 +193,5 @@ Real AI. Real manuals. Clear next steps.
 - [ ] No desktop video-player controls or simulator information appear in the final video.
 - [ ] Narration and subtitles are synchronized and understandable without audio.
 - [ ] The exported MP4 plays from beginning to end without errors.
+
+Record final video checks and the recording commit in [the workstream acceptance record](zhang-fan-review.md); only check items that were actually verified.

@@ -1,0 +1,16 @@
+{
+  "manuals": 16,
+  "chunks": 2032,
+  "audited_pages": 599,
+  "page_status": {
+    "text_extracted": 548,
+    "sparse_or_image_page": 45,
+    "excluded_undecoded_glyphs": 6
+  },
+  "public_files": 14,
+  "unique_public_photos": 13,
+  "alternative_source_files": 3,
+  "alternative_inputs": 18,
+  "quality_variants": 26,
+  "scope": "Bundled file integrity and provenance only; no model calls or device validation"
+}

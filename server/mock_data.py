@@ -1,13 +1,11 @@
-"""Mock 确定性演示数据:覆盖 PRD §12 的 6 个验收场景。
+"""Mock 确定性演示数据:照片演示与手动错误码演示分开路由。
 
 mock 模式(无可用真实模型配置)时,只通过文件名关键词或演示照片指纹匹配场景。
 未知图片明确拒绝,不生成无关结果。
 """
 from __future__ import annotations
 
-import io
-
-from PIL import Image
+from hashlib import sha256
 
 MOCK_SCENARIOS: dict[str, dict] = {
     "router": {
@@ -24,20 +22,6 @@ MOCK_SCENARIOS: dict[str, dict] = {
              "TP-Link 无线路由器快速指南", "§4.2 登录管理页检查拨号"),
             ("若仍红灯,用电脑直连光猫测试:直连也断网则为运营商问题,致电宽带客服。",
              "TP-Link 无线路由器快速指南", "§4.3 确认宽带是否欠费或故障"),
-        ],
-    },
-    "washer": {
-        "device_category": "washing_machine", "brand": "Bosch", "model": None,
-        "error_code": "E24",
-        "decision": "diy",
-        "decision_reason": "排水泵滤网堵塞,非破坏性操作,工具只需一枚硬币,约 15 分钟。",
-        "steps": [
-            ("断电并关闭水龙头,在机器右下角找到排水泵检修口,垫毛巾接残水。",
-             "Bosch 滚筒洗衣机用户手册", "§7.2 排水泵检修口位置"),
-            ("用硬币逆时针旋开滤网盖,取出滤网清除硬币、纽扣等异物。",
-             "Bosch 滚筒洗衣机用户手册", "§7.3 清理排水泵滤网"),
-            ("手转叶轮确认顺畅,装回滤网拧紧,通电试运行单脱水程序。",
-             "Bosch 滚筒洗衣机用户手册", "§7.4 复位与测试"),
         ],
     },
     "ikea": {
@@ -67,22 +51,15 @@ MOCK_SCENARIOS: dict[str, dict] = {
     "water_heater": {
         "device_category": "water_heater", "brand": None, "model": None,
         "error_code": None,
-        "decision": "landlord",
-        "decision_reason": "热水器属房东配置,内部维修责任在房东;可先自行尝试复位键。",
-        "steps": [
-            ("检查漏电保护插头是否跳闸,按下插头上的复位按钮。",
-             "储水式电热水器使用与保养手册", "§3.1 无热水排查"),
-            ("若电源灯亮但不加热,待内胆冷却后按侧盖内温控复位键。",
-             "储水式电热水器使用与保养手册", "§3.1 无热水排查"),
-            ("若仍无热水,内部加热管/温控故障责任通常在房东,拍照记录并联系房东。",
-             "储水式电热水器使用与保养手册", "§5 责任提示"),
-        ],
+        "decision": "refused",
+        "decision_reason": "电热水器内部同时涉及水路和市电，请停止自行检修并联系专业人员。",
+        "steps": [],
+        "safety_refused": True,
     },
 }
 
 _KEYWORDS = {
     "router": ["router", "tplink", "路由器", "wifi"],
-    "washer": ["washer", "washing", "e24", "bosch", "洗衣机"],
     "ikea": ["ikea", "billy", "shelf", "书架", "家具"],
     "microwave": ["microwave", "微波炉"],
     "water_heater": ["heater", "water", "热水器"],
@@ -99,28 +76,16 @@ def route(filename: str | None, image_bytes: bytes) -> dict | None:
     return MOCK_SCENARIOS[matched] if matched else None
 
 
-# demo-photos/ 四张合成图的均值色指纹(Pillow 重采样 64x64 后实测)
-_PHOTO_FINGERPRINTS = {
-    "ikea": (231, 226, 214),
-    "microwave": (158, 158, 163),
-    "router": (183, 184, 190),
-    "washer": (208, 208, 213),
+# Exact SHA-256 hashes of the supported original demo-photos files. Colour
+# similarity is not evidence of identity: unrelated pale/grey images must not
+# receive a deterministic appliance diagnosis. Renamed original files work;
+# edited/re-encoded copies require an explicit scenario filename in mock mode.
+_PHOTO_HASHES = {
+    "d371fcfee2e4ee25d073a936e443270bcfeb962a11e8a714b0bcc7fea3e8ad1a": "ikea",
+    "5b0c273158ccde0c124a927b5ed9bdc29aa8ebbd2fbde1f89db8fe429947ef61": "microwave",
+    "cf83801c9950325f08e60493b09be10317c2849b93b5d3b8e57097d577dd8200": "router",
 }
-
-_MATCH_THRESHOLD = 40  # 指纹最近距离上限,超出视为未知照片
 
 
 def _match_photo(image_bytes: bytes) -> str | None:
-    try:
-        im = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((64, 64))
-    except Exception:
-        return None
-    data = list(im.getdata())
-    n = len(data)
-    mean = tuple(sum(p[i] for p in data) // n for i in range(3))
-    best, best_dist = None, None
-    for key, fp in _PHOTO_FINGERPRINTS.items():
-        dist = sum((mean[i] - fp[i]) ** 2 for i in range(3)) ** 0.5
-        if best_dist is None or dist < best_dist:
-            best, best_dist = key, dist
-    return best if best_dist is not None and best_dist < _MATCH_THRESHOLD else None
+    return _PHOTO_HASHES.get(sha256(image_bytes).hexdigest())

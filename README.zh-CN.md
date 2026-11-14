@@ -12,10 +12,12 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.7-54C5F8?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.11+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Qwen3-VL](https://img.shields.io/badge/AI-Qwen3--VL-7B61C9)](https://www.alibabacloud.com/help/en/model-studio/qwen-vl-compatible-with-openai)
-[![Tests](https://img.shields.io/badge/Tests-51_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
+[![Tests](https://img.shields.io/badge/Backend-81_passed-2AA887)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/tree/main/server/tests)
 [![GitHub stars](https://img.shields.io/github/stars/junjiacaohku-ai/COMP7506-Group-Project-SnapFix?style=social)](https://github.com/junjiacaohku-ai/COMP7506-Group-Project-SnapFix/stargazers)
 
 <img src="docs/assets/snapfix-hero.png" alt="SnapFix 产品概览与真实 App 界面" width="100%">
+
+概览图包含已过期的“洗衣机 E24”旧界面，当前行为以[演示场景表](#6-演示场景)及[验收记录](docs/zhang-fan-review.md)为准。
 
 [项目概述](#overview) · [产品功能](#features) · [系统架构](#architecture) · [快速开始](#quick-start) · [测试与验证](#evaluation) · [边界与限制](#limitations)
 
@@ -152,7 +154,7 @@ Google 登录需配置 OAuth Client ID，未配置时按钮隐藏；Apple 登录
 | 场景 | 输入方式 | 预期结果 |
 |---|---|---|
 | 路由器指示灯 | 已知演示照片，或文件名包含 `router` / `tplink` | TP-Link 外部排查步骤，并明确标识演示来源 |
-| Bosch E24 | 品牌 `Bosch`、错误码 `E24` | mock 模式提供确定性洗衣机演示；在线模式检索真实语料 |
+| Bosch 洗碗机 E24 | 品牌 `Bosch`、错误码 `E24` 或 `E:24` | mock：型号未知，转专业处理且无维修步骤；在线：检索真实手册，由依据与安全校验决定结果 |
 | IKEA BILLY | 已知演示照片，或文件名包含 `ikea` / `billy` | 组装指导与防倾倒警告 |
 | 微波炉 | 已知演示照片，或文件名包含 `microwave` | 安全拒答、不提供 DIY 步骤，并可直接报修 |
 | 不合格图片 | 过暗、模糊、过小、无效或超大图片 | HTTP 422，并显示当前语言的重拍说明 |
@@ -205,11 +207,11 @@ flutter test
 
 | 验证项目 | 当前结果 | 能证明与不能证明的内容 |
 |---|---|---|
-| 后端回归测试 | **46 项通过** | 语料、检索、安全、图片质量、账号隔离、状态与报修草稿 |
-| Flutter 测试 | **5 项通过** | 模型解析与产品交互逻辑 |
-| Flutter 静态分析 | **无问题** | Dart 静态质量，不代表设备兼容性 |
+| 后端回归测试 | **81 项通过**，2026-11-14 复现 | 语料、检索、安全、图片质量、账号隔离、状态与报修草稿 |
+| Flutter 测试 | 仓库此前记录：**5 项通过**；新增两项错误流程测试，本次未运行 | 模型解析与产品交互逻辑 |
+| Flutter 静态分析 | 仓库此前记录：**无问题**；本次未重跑 | Dart 静态质量，不代表设备兼容性 |
 | 图片质量变体 | **26 个受控用例** | 暗化／模糊重拍行为，不代表诊断准确率 |
-| 真实 Qwen HTTP 流程 | **路由器、微波炉、Bosch E24 已验证** | 这些场景的真实模型接入与来源校验 |
+| 真实 Qwen HTTP 流程 | 此前记录：路由器、微波炉、Bosch E24；本次未重跑 | 未附逐次运行证据，在线验收仍待完成 |
 | 手册语料 | **16 份资料／2,032 个文本块** | 当前可用的证据覆盖，不代表支持所有家电 |
 
 ### 验证原则
@@ -248,6 +250,8 @@ flutter test
 - [项目报告 PDF](docs/report/snapfix-report.pdf)
 - [报告 LaTeX 源文件](docs/report/snapfix-report.tex)
 - [演示视频脚本](docs/video-script.md)
+- [现有演示视频](docs/video/snapfix-full-demo.mp4) · [双语解说稿](docs/video/narration-bilingual.md)
+- [张帆工作线检查与验收记录](docs/zhang-fan-review.md)
 - [验证与复现指南](docs/validation.md)
 - [手册来源清单](server/data/manifest.json)
 - [公开图片署名与许可](docs/demo-assets/public/sources.json)
@@ -264,6 +268,8 @@ flutter test
 | **朱雨泰民** | FE-1 扫描与诊断 | Flutter 基础、共享组件、首页、相机、预览与诊断流程 |
 | **杨蕊嘉** | FE-2 指导与档案 | 分步指导、维修档案、报修交互、视觉设计与视频材料 |
 | **张帆** | 数据与内容 | 语料 ETL、演示场景、市场调研、验收记录与带来源的公开图片 |
+
+该工作线的文件依据、完成情况和待办见[逐项检查与验收记录](docs/zhang-fan-review.md)。语料和素材检查可复现；真实模型与真机验收仍待补齐。检查针对仓库成果，不根据分工表推断个人历史贡献。
 
 第三方手册与照片遵循各自来源条款和许可。
 

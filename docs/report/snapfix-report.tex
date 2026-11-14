@@ -1,4 +1,4 @@
-\documentclass[10.5pt,a4paper]{article}
+\documentclass[10pt,a4paper]{article}
 \usepackage[margin=19mm,top=20mm,bottom=20mm]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -40,7 +40,7 @@
   {\large\color{SnapMuted}Photo diagnosis, safety decisions, repair tracking and bilingual reporting}
 }
 \author{COMP7506 Group Project}
-\date{Initial report draft · November 2026}
+\date{Report draft revised 14 November 2026}
 
 \begin{document}
 \maketitle
@@ -62,7 +62,7 @@ Zhang Fan & \\
 
 \vspace{3mm}
 \begin{abstract}
-SnapFix is a smart-home maintenance application for tenants and household users who can observe a problem but may not know the appliance model, relevant instructions, or safest next step. The application combines Qwen3-VL visual extraction, BM25 manual retrieval, deterministic safety rules, chunk-level citation validation, persistent repair progress, and editable Chinese/English repair requests. Rather than treating a model response as authoritative, SnapFix separates visible observations from possible causes and withholds unsupported do-it-yourself instructions. The current implementation includes real accounts, source-linked guidance, safety refusal, and a repair archive. Evaluation covers 46 backend tests, five Flutter tests, 26 controlled image-quality variants, and selected real Qwen workflows. These results demonstrate implementation and workflow reliability; they do not establish universal diagnostic accuracy.
+SnapFix is a smart-home maintenance application for tenants and household users who can observe a problem but may not know the appliance model, relevant instructions, or safest next step. The application combines Qwen3-VL visual extraction, BM25 manual retrieval, deterministic safety rules, chunk-level citation validation, persistent repair progress, and editable Chinese/English repair requests. Rather than treating a model response as authoritative, SnapFix separates visible observations from possible causes and withholds unsupported do-it-yourself instructions. The current implementation includes real accounts, source-linked guidance, safety refusal, and a repair archive. The 14 November 2026 review passed 81 backend tests and checked 26 controlled image-quality variants. Earlier repository summaries report five Flutter tests and selected real Qwen workflows; those were not rerun in this review. These checks demonstrate implementation and workflow reliability within their scope, not universal diagnostic accuracy.
 \end{abstract}
 
 \vspace{2mm}
@@ -134,14 +134,14 @@ Explicit demo mode & Uses labelled deterministic scenarios without model credent
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{../assets/snapfix-hero.png}
-  \caption{SnapFix product overview with real application screens. Personal information in the home screenshot is replaced by a demo label.}
+  \caption{Earlier application screens illustrating the interface. The pictured washer E24 result is obsolete; the current mock is a dishwasher with professional referral and no repair steps. Personal information is replaced by a demo label.}
 \end{figure}
 
 \section{System and AI Design}
 
 \subsection{Architecture}
 
-SnapFix uses a Flutter application and an authenticated FastAPI backend. Qwen3-VL is the currently verified live provider through an OpenAI-compatible API; Gemini remains an optional provider. SQLite stores user accounts, token hashes, diagnoses, step feedback, repair status, report drafts, and the imported manual corpus. Original photographs are not written to the database.
+SnapFix uses a Flutter application and an authenticated FastAPI backend. Qwen3-VL is the live provider described by the integration through an OpenAI-compatible API; Gemini remains an optional provider. SQLite stores user accounts, token hashes, diagnoses, step feedback, repair status, report drafts, and the imported manual corpus. Original photographs are not written to the database.
 
 \begin{figure}[htbp]
   \centering
@@ -168,27 +168,27 @@ This design deliberately separates probabilistic model output from deterministic
 
 \subsection{Corpus and provenance}
 
-The current corpus contains 16 public documents and 2,032 text chunks. Records include source URLs, PDF pages, stable chunk IDs, source hashes, and extraction metadata. The extraction audit records sparse and undecodable pages, while source-bound corrections remain linked to the original file hash. Public demonstration photographs include author, licence, hash, and usage metadata. Appearance images are used for workflow and image-quality testing, not as confirmed fault examples.
+The current corpus contains 16 public documents and 2,032 text chunks. Records include source URLs, PDF pages, stable chunk IDs, source hashes, and extraction metadata. A full rebuild from the bundled PDFs on 14 November 2026 reproduced the committed chunks, manual records, and extraction audit byte for byte. Of 599 audited pages, 548 have extracted text, 45 are sparse, and six are excluded as undecodable; one page has a source-bound visual correction. These counts describe extraction coverage, not expert validation of every repair procedure. Public demonstration photographs include author, licence, hash, and usage metadata. Appearance images are used for workflow and image-quality testing, not as confirmed fault examples.
 
 \subsection{Current verification}
 
 \begin{center}
 \small
-\begin{tabularx}{\textwidth}{p{37mm} p{27mm} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{33mm} >{\raggedright\arraybackslash}p{37mm} >{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Verification} & \textbf{Current result} & \textbf{Scope} \\
 \midrule
-Backend regression & 46 passed & Corpus, retrieval, safety, image quality, account isolation, status, and report drafts \\
-Flutter tests & 5 passed & Model parsing and product interaction logic \\
-Flutter analysis & No issues found & Static Dart checks, not device compatibility \\
+Backend regression & 81 passed & Reproduced 14 November 2026: baseline 46 plus 35 mock and data acceptance checks \\
+Flutter tests & Previously: 5 passed & Prior result; two new error-flow tests added but not run (SDK unavailable) \\
+Flutter analysis & Previously: no issues & Repository-reported static checks; not rerun \\
 Image-quality variants & 26 controlled cases & Dark/blur retake behavior, not diagnostic accuracy \\
-Real Qwen HTTP flows & Router, microwave, Bosch E24 & Live provider integration and source validation on those scenarios \\
+Real Qwen HTTP flows & Prior summary only & Router, microwave, Bosch E24; per-run records not bundled, not rerun \\
 Manual corpus & 16 documents / 2,032 chunks & Available evidence coverage, not universal appliance support \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
-The backend suite uses an isolated temporary database and does not call a live model. Flutter tests cover model parsing, source expansion, feedback and undo, status confirmation, and report editing across language switches. Real HTTP checks confirmed Qwen source labels, microwave safety refusal, an English safety report, and Bosch E24 guidance linked to real manual chunks.
+The backend suite uses an isolated temporary database and does not call a live model. It now verifies S1--S6, alternative inputs, asset integrity, correct Bosch E24 mock routing, unknown-image rejection, and safety enforcement in mock mode. The E24 mock is a dishwasher with an unknown model and professional referral, not evidence of a confirmed fault. Earlier live-provider summaries require a recording commit, input, output, citations, and timing before live acceptance is complete. The existing 128.633-second video decodes fully but has silent audio; narration, subtitles, and missing evidence interactions remain to be completed.
 
 \subsection{Limitations}
 
@@ -200,7 +200,7 @@ The integrated team mainline combines selected outputs from the original team wo
 
 \begin{center}
 \small
-\begin{tabularx}{\textwidth}{p{25mm} p{34mm} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{25mm} >{\raggedright\arraybackslash}p{34mm} >{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Member} & \textbf{Original role} & \textbf{Workstream and coordination responsibilities} \\
 \midrule
@@ -213,20 +213,22 @@ Zhang Fan & Data and content & Corpus ETL, demonstration scenarios, market resea
 \end{tabularx}
 \end{center}
 
+For the data and content workstream, the current artifact review and outstanding acceptance work are recorded in \texttt{docs/zhang-fan-review.md}. It maps corpus ETL, demo scenarios, market research, acceptance evidence, and attributed images to repository files. This artifact-level check does not establish personal authorship from the role table alone.
+
 Each member should confirm the final description and add work completed outside GitHub before submission. Each member of a multi-person team must also submit the course Peer Review Form separately.
 
 \begin{thebibliography}{9}
 \bibitem{ifixit}
-iFixit, ``Introducing FixBot,'' 9 December 2025. \url{https://www.ifixit.com/News/114700/introducing-fixbot}. Reviewed 30 October 2026.
+iFixit, ``Introducing FixBot,'' 9 December 2025. \url{https://www.ifixit.com/News/114700/introducing-fixbot}. Reviewed 30 October 2026; source rechecked 14 November 2026.
 
 \bibitem{frontdoor}
-Frontdoor, application support and FAQ. \url{https://www.frontdoor.com/member-support}; Android application listing: \url{https://play.google.com/store/apps/details?id=com.frontdoor.app.prod}. Reviewed 30 October 2026.
+Frontdoor, application support and FAQ. \url{https://www.frontdoor.com/member-support}; Android application listing: \url{https://play.google.com/store/apps/details?id=com.frontdoor.app.prod}. Reviewed 30 October 2026; source rechecked 14 November 2026.
 
 \bibitem{lens}
-Google Search Help, ``Search with an image on Google.'' \url{https://support.google.com/websearch/answer/1325808?hl=en}. Reviewed 30 October 2026.
+Google Search Help, ``Search with an image on Google.'' \url{https://support.google.com/websearch/answer/1325808?hl=en}. Reviewed 30 October 2026; source rechecked 14 November 2026.
 
 \bibitem{fixitlens}
-FixIt Lens repository, engineering reference. \url{https://github.com/rakexhs/fixit-lens}. Reviewed 30 October 2026.
+FixIt Lens repository, engineering reference. \url{https://github.com/rakexhs/fixit-lens}. Reviewed 30 October 2026; source rechecked 14 November 2026.
 \end{thebibliography}
 
 \end{document}

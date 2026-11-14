@@ -1,4 +1,4 @@
-package hk.snapfix.snapfix_solo
+package hk.snapfix.snapfix
 
 import io.flutter.embedding.android.FlutterActivity
 

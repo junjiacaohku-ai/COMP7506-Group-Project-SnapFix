@@ -255,7 +255,7 @@ Camera permissions, system notifications, sharing, and OAuth should still receiv
 
 ### Team provenance
 
-This Solo mainline integrates selected outputs from the original team workstreams. The table records the original team roles and the sources referenced by this repository; it is not a claim that every team feature was merged unchanged.
+This integrated team mainline combines selected outputs from the original team workstreams. The table records the original team roles and the sources referenced by this repository; it is not a claim that every team feature was merged unchanged.
 
 | Contributor | Original team role | Workstream and coordination responsibilities |
 |---|---|---|

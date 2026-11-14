@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:snapfix_solo/models.dart';
+import 'package:snapfix/models.dart';
 
 void main() {
   test('Qwen session keeps chunk provenance and repair status', () {

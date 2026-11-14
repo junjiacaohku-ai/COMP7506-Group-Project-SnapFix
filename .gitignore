@@ -20,3 +20,5 @@ app/android/.gradle/
 app/android/local.properties
 .vscode/
 .idea/
+# Local demo recordings
+docs/video/raw/

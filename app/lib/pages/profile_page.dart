@@ -421,7 +421,7 @@ class ProfilePageState extends State<ProfilePage> {
                       _SettingsTile(
                         icon: Icons.info_outline_rounded,
                         title: 'SnapFix 随手修',
-                        subtitle: '版本 1.0.0 · Solo',
+                        subtitle: '版本 1.0.0',
                       ),
                     ],
                   ),

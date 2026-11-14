@@ -5,11 +5,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:snapfix_solo/api.dart';
-import 'package:snapfix_solo/models.dart';
-import 'package:snapfix_solo/pages/result_page.dart';
-import 'package:snapfix_solo/settings.dart';
-import 'package:snapfix_solo/theme.dart';
+import 'package:snapfix/api.dart';
+import 'package:snapfix/models.dart';
+import 'package:snapfix/pages/result_page.dart';
+import 'package:snapfix/settings.dart';
+import 'package:snapfix/theme.dart';
 
 Map<String, dynamic> fixture() => {
   'id': 'session-1',

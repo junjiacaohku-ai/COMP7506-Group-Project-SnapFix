@@ -4,7 +4,7 @@
 **Target duration:** 2:50  
 **Hard limit:** Under 3:00  
 **Format:** Real simulator/app recording + short title cards + English narration and subtitles  
-**Version basis:** Current integrated Solo mainline with Qwen, real manual corpus, repair status, and editable reports
+**Version basis:** Current integrated team mainline with Qwen, real manual corpus, repair status, and editable reports
 
 ## 1. Creative direction
 

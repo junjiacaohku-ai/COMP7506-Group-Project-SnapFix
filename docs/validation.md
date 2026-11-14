@@ -1,6 +1,6 @@
 # SnapFix Validation and Reproduction Guide
 
-This document explains how to reproduce the current Solo implementation and interpret its evidence. It replaces older team-stage runbooks whose providers, ports, API fields, and test counts no longer apply.
+This document explains how to reproduce the current integrated team implementation and interpret its evidence. It replaces older team-stage runbooks whose providers, ports, API fields, and test counts no longer apply.
 
 ## 1. Reproduce from a source package
 

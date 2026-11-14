@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-_TEMP = TemporaryDirectory(prefix='snapfix-solo-tests-')
+_TEMP = TemporaryDirectory(prefix='snapfix-team-tests-')
 _PREVIOUS_DB = os.environ.get('SNAPFIX_DB')
 os.environ['SNAPFIX_DB'] = str(Path(_TEMP.name) / 'test.db')
 

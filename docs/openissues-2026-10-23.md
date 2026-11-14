@@ -30,7 +30,7 @@ SnackBar(`app/lib/util/toast.dart`)。**待办:在真机上跑一遍错误反馈
 
 - `flutter run` 在该模拟器上启动后约 1 分钟内报 "Lost connection to device"
   并退出,但 app 本体继续在模拟器上运行;可用
-  `xcrun simctl launch/terminate <udid> hk.snapfix.snapfixSolo` 直接操控 app。
+  `xcrun simctl launch/terminate <udid> hk.snapfix.snapfix` 直接操控 app。
 - 杀掉后端后,app 内 `http.Client` 复用的 keep-alive 连接会让下一次请求
   挂起至 30s 超时(而非立即 connection refused);验证离线错误路径时需先
   重启 app 再断后端。

@@ -15,7 +15,7 @@ import auth
 _GOOGLE_JWKS = "https://www.googleapis.com/oauth2/v3/certs"
 _APPLE_JWKS = "https://appleid.apple.com/auth/keys"
 _APPLE_ISSUER = "https://appleid.apple.com"
-_APPLE_BUNDLE_ID = "hk.snapfix.snapfixSolo"
+_APPLE_BUNDLE_ID = "hk.snapfix.snapfix"
 _google_jwk_client = PyJWKClient(_GOOGLE_JWKS)
 _apple_jwk_client = PyJWKClient(_APPLE_JWKS)
 

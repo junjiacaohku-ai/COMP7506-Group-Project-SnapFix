@@ -1,4 +1,4 @@
-"""SnapFix(solo 版)FastAPI 入口:API 层,薄壳,业务在 pipeline.py。"""
+"""SnapFix FastAPI 入口:API 层,薄壳,业务在 pipeline.py。"""
 from __future__ import annotations
 
 from fastapi import Depends, FastAPI, Form, Header, HTTPException, UploadFile
@@ -13,7 +13,7 @@ import providers
 import retrieval
 from pipeline import QualityError
 
-app = FastAPI(title="SnapFix Solo API", version="1.1.0")
+app = FastAPI(title="SnapFix API", version="1.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

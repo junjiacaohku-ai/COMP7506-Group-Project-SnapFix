@@ -173,7 +173,7 @@ const _english = <String, String>{
   '未找到与品牌和错误码匹配的手册，无法提供维修步骤。': 'No manual matching this brand and error code was found, so no repair steps are available.',
   '生成内容未通过手册引用校验，已停止提供自行维修步骤。': 'The generated content failed manual citation checks, so DIY steps have been withheld.',
   '关于': 'About',
-  '版本 1.0.0 · Solo': 'Version 1.0.0 · Solo',
+  '版本 1.0.0': 'Version 1.0.0',
   '保存': 'Save',
   '无法打开相机或相册，请检查权限':
       'Couldn’t open the camera or photo library. Check your permissions.',

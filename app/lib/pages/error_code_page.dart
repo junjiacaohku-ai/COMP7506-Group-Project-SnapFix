@@ -44,7 +44,11 @@ class _ErrorCodePageState extends State<ErrorCodePage> {
       AppPageRoute(
         child: AnalyzingPage(
           api: widget.api,
-          start: () => widget.api.diagnoseManual(brand, code),
+          start: (cancellation) => widget.api.diagnoseManual(
+            brand,
+            code,
+            cancellation: cancellation,
+          ),
         ),
       ),
     );

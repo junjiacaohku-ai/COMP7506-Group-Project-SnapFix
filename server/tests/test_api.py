@@ -125,3 +125,40 @@ def test_feedback_status_report_drafts_and_delete(client, auth_headers):
 
     assert client.delete(session_url, headers=auth_headers).status_code == 200
     assert client.get(session_url, headers=auth_headers).status_code == 404
+
+def test_timeout_feedback_is_persisted(client, auth_headers, user):
+    response = client.post(
+        '/api/diagnosis-feedback',
+        json={
+            'event': 'timeout',
+            'language': 'en',
+            'elapsed_seconds': 120,
+            'error': '分析超时，请稍后重试',
+            'platform': 'android',
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload['status'] == 'recorded'
+
+    import db
+
+    with db.connect() as conn:
+        row = conn.execute(
+            'SELECT user_id,event,language,elapsed_seconds,error,platform '
+            'FROM diagnosis_feedback WHERE id=?',
+            (payload['id'],),
+        ).fetchone()
+    assert row is not None
+    assert row['user_id'] == user[0]['id']
+    assert row['event'] == 'timeout'
+    assert row['language'] == 'en'
+    assert row['elapsed_seconds'] == 120
+    assert row['platform'] == 'android'
+
+    unauthorized = client.post(
+        '/api/diagnosis-feedback',
+        json={'event': 'timeout', 'language': 'en', 'elapsed_seconds': 120},
+    )
+    assert unauthorized.status_code == 401

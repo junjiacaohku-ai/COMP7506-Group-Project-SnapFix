@@ -68,6 +68,16 @@ CREATE TABLE IF NOT EXISTS steps (
     citation_chunk_id TEXT, citation_text TEXT,
     feedback TEXT
 );
+CREATE TABLE IF NOT EXISTS diagnosis_feedback (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event TEXT NOT NULL,
+    language TEXT NOT NULL,
+    elapsed_seconds INTEGER NOT NULL,
+    error TEXT,
+    platform TEXT,
+    created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS report_drafts (
     session_id TEXT REFERENCES sessions(id) ON DELETE CASCADE,
     lang TEXT NOT NULL,
@@ -159,5 +169,7 @@ def init() -> None:
                 ON sessions(user_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_identities_user
                 ON auth_identities(user_id);
+            CREATE INDEX IF NOT EXISTS idx_diagnosis_feedback_user
+                ON diagnosis_feedback(user_id, created_at DESC);
         """)
     import_corpus(DB_PATH, DATA_PATH)

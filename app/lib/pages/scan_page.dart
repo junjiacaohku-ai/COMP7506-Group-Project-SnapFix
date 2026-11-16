@@ -23,6 +23,28 @@ class _ScanPageState extends State<ScanPage> {
   final _picker = ImagePicker();
   XFile? _photo;
   bool _picking = false;
+  @override
+  void initState() {
+    super.initState();
+    _recoverLostPhoto();
+  }
+
+  Future<void> _recoverLostPhoto() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (!mounted || response.isEmpty) return;
+      final files = response.files;
+      if (files != null && files.isNotEmpty) {
+        setState(() => _photo = files.first);
+      } else if (response.exception != null) {
+        showAppToast(context, context.tr('无法恢复上次选择的照片'));
+      }
+    } catch (_) {
+      if (mounted) {
+        showAppToast(context, context.tr('无法恢复上次选择的照片'));
+      }
+    }
+  }
 
   Future<void> _pick(ImageSource source) async {
     if (_picking) return;
@@ -46,7 +68,8 @@ class _ScanPageState extends State<ScanPage> {
       AppPageRoute(
         child: AnalyzingPage(
           api: widget.api,
-          start: () => widget.api.analyzeImage(photo.path),
+          start: (cancellation) =>
+              widget.api.analyzeImage(photo.path, cancellation: cancellation),
         ),
       ),
     );

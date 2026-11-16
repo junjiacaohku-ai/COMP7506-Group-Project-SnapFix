@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../ui.dart';
 import '../util/toast.dart';
 import 'account_page.dart';
+import 'feedback_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -29,6 +30,7 @@ class ProfilePage extends StatefulWidget {
 class ProfilePageState extends State<ProfilePage> {
   HealthInfo? _health;
   int? _sessionCount;
+  int? _feedbackCount;
   String? _error;
 
   @override
@@ -42,11 +44,13 @@ class ProfilePageState extends State<ProfilePage> {
       final results = await Future.wait([
         widget.api.health(),
         widget.api.listSessions(),
+        widget.api.listDiagnosisFeedback(),
       ]);
       if (!mounted) return;
       setState(() {
         _health = results[0] as HealthInfo;
         _sessionCount = (results[1] as List<Session>).length;
+        _feedbackCount = (results[2] as List<DiagnosisFeedback>).length;
         _error = null;
       });
     } catch (_) {
@@ -310,6 +314,24 @@ class ProfilePageState extends State<ProfilePage> {
                                 'count': _sessionCount,
                               }),
                         onTap: widget.onHistoryTap,
+                      ),
+                      const Divider(height: 1, indent: 60),
+                      _SettingsTile(
+                        icon: Icons.feedback_outlined,
+                        title: '用户反馈历史',
+                        subtitle: _feedbackCount == null
+                            ? '查看已提交的超时反馈'
+                            : context.tr('{count} 条反馈', {
+                                'count': _feedbackCount,
+                              }),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            AppPageRoute(
+                              child: FeedbackHistoryPage(api: widget.api),
+                            ),
+                          );
+                          reload();
+                        },
                       ),
                     ],
                   ),

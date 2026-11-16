@@ -125,3 +125,97 @@ def test_feedback_status_report_drafts_and_delete(client, auth_headers):
 
     assert client.delete(session_url, headers=auth_headers).status_code == 200
     assert client.get(session_url, headers=auth_headers).status_code == 404
+
+def test_timeout_feedback_is_persisted(client, auth_headers, user):
+    response = client.post(
+        '/api/diagnosis-feedback',
+        json={
+            'event': 'timeout',
+            'language': 'en',
+            'elapsed_seconds': 120,
+            'error': '分析超时，请稍后重试',
+            'platform': 'android',
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload['status'] == 'recorded'
+
+    import db
+
+    with db.connect() as conn:
+        row = conn.execute(
+            'SELECT user_id,event,language,elapsed_seconds,error,platform '
+            'FROM diagnosis_feedback WHERE id=?',
+            (payload['id'],),
+        ).fetchone()
+    assert row is not None
+    assert row['user_id'] == user[0]['id']
+    assert row['event'] == 'timeout'
+    assert row['language'] == 'en'
+    assert row['elapsed_seconds'] == 120
+    assert row['platform'] == 'android'
+
+    unauthorized = client.post(
+        '/api/diagnosis-feedback',
+        json={'event': 'timeout', 'language': 'en', 'elapsed_seconds': 120},
+    )
+    assert unauthorized.status_code == 401
+
+
+def test_feedback_history_is_account_scoped(client, auth_headers, user):
+    own = client.post(
+        '/api/diagnosis-feedback',
+        json={
+            'event': 'timeout',
+            'language': 'en',
+            'elapsed_seconds': 120,
+            'platform': 'ios',
+        },
+        headers=auth_headers,
+    )
+    assert own.status_code == 201
+    own_id = own.json()['id']
+
+    import auth
+    import db
+
+    with db.connect() as conn:
+        other = auth.create_user(
+            conn, 'Feedback Other', 'feedback-other@example.com', 'other-password-2026'
+        )
+        other_token = auth.issue_token(conn, other['id'])
+    other_headers = {'Authorization': f'Bearer {other_token}'}
+    try:
+        other_response = client.post(
+            '/api/diagnosis-feedback',
+            json={
+                'event': 'cancelled',
+                'language': 'zh',
+                'elapsed_seconds': 5,
+                'platform': 'android',
+            },
+            headers=other_headers,
+        )
+        assert other_response.status_code == 201
+        other_id = other_response.json()['id']
+
+        own_history = client.get('/api/diagnosis-feedback', headers=auth_headers)
+        assert own_history.status_code == 200
+        own_items = own_history.json()
+        assert [item['id'] for item in own_items] == [own_id]
+        assert own_items[0]['event'] == 'timeout'
+        assert own_items[0]['platform'] == 'ios'
+
+        other_history = client.get('/api/diagnosis-feedback', headers=other_headers)
+        assert other_history.status_code == 200
+        other_items = other_history.json()
+        assert [item['id'] for item in other_items] == [other_id]
+        assert other_items[0]['event'] == 'cancelled'
+        assert other_items[0]['platform'] == 'android'
+
+        assert client.get('/api/diagnosis-feedback').status_code == 401
+    finally:
+        with db.connect() as conn:
+            conn.execute('DELETE FROM users WHERE id=?', (other['id'],))

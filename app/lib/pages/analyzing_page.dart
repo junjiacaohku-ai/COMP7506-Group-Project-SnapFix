@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../api.dart';
 import '../l10n.dart';
@@ -8,13 +9,14 @@ import '../models.dart';
 import '../settings.dart';
 import '../theme.dart';
 import '../ui.dart';
+import '../util/toast.dart';
 import 'result_page.dart';
 
 class AnalyzingPage extends StatefulWidget {
   const AnalyzingPage({super.key, required this.api, required this.start});
 
   final ApiClient api;
-  final Future<Session> Function() start;
+  final Future<Session> Function(DiagnosisCancellation cancellation) start;
 
   @override
   State<AnalyzingPage> createState() => _AnalyzingPageState();
@@ -25,6 +27,11 @@ class _AnalyzingPageState extends State<AnalyzingPage>
   late final AnimationController _spin;
   late final AnimationController _pulse;
   bool? _animationsReduced;
+  final DiagnosisCancellation _cancellation = DiagnosisCancellation();
+  bool _timedOut = false;
+  bool _feedbackSubmitting = false;
+  bool _feedbackSubmitted = false;
+  String _timeoutDetail = '';
 
   @override
   void initState() {
@@ -61,6 +68,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
 
   @override
   void dispose() {
+    _cancellation.cancel();
     _spin.dispose();
     _pulse.dispose();
     super.dispose();
@@ -68,7 +76,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
 
   Future<void> _run() async {
     try {
-      final result = await widget.start();
+      final result = await widget.start(_cancellation);
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(
         AppPageRoute(
@@ -76,8 +84,16 @@ class _AnalyzingPageState extends State<AnalyzingPage>
         ),
       );
     } on ApiException catch (error) {
+      if (error.isCancelled) return;
       if (!mounted) return;
-      if (error.isQualityError) {
+      if (error.isTimeout) {
+        _spin.stop();
+        _pulse.stop();
+        setState(() {
+          _timedOut = true;
+          _timeoutDetail = error.message;
+        });
+      } else if (error.isQualityError) {
         _showQualityDialog(error.message);
       } else {
         Navigator.of(context).pop(error.message);
@@ -116,17 +132,39 @@ class _AnalyzingPageState extends State<AnalyzingPage>
 
   @override
   Widget build(BuildContext context) {
+    if (_timedOut) {
+      return PopScope(
+        canPop: true,
+        child: Scaffold(
+          body: AppBackground(
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 26),
+                child: _buildTimeoutContent(context),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return PopScope(
-      canPop: false,
+      canPop: true,
       child: Scaffold(
         body: AppBackground(
           child: SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 18, 24, 26),
               child: Column(
                 children: [
                   Row(
                     children: [
+                      IconButton(
+                        key: const Key('analyzing-back-button'),
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        tooltip: context.tr('取消并返回'),
+                      ),
+                      const SizedBox(width: 2),
                       BrandMark(size: 34),
                       SizedBox(width: 10),
                       Text(
@@ -140,7 +178,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                       ),
                     ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 28),
                   _buildOrb(),
                   const SizedBox(height: 28),
                   Text(
@@ -167,7 +205,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
                     context.tr('耗时取决于照片与网络状况'),
                     style: TextStyle(color: context.colors.muted, fontSize: 11),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 28),
                   const SurfaceCard(
                     radius: 24,
                     padding: EdgeInsets.symmetric(horizontal: 18, vertical: 18),
@@ -200,6 +238,151 @@ class _AnalyzingPageState extends State<AnalyzingPage>
         ),
       ),
     );
+  }
+
+  Widget _buildTimeoutContent(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            IconButton(
+              key: const Key('timeout-back-button'),
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              tooltip: context.tr('退出并重新选择'),
+            ),
+            const SizedBox(width: 2),
+            BrandMark(size: 34),
+            const SizedBox(width: 10),
+            Text(
+              'SNAPFIX',
+              style: TextStyle(
+                color: context.colors.secondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.8,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 40),
+        Container(
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            gradient: context.colors.primaryGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: context.colors.primary.withValues(alpha: 0.24),
+                blurRadius: 34,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.timer_off_outlined,
+            color: Colors.white,
+            size: 46,
+          ),
+        ),
+        const SizedBox(height: 26),
+        Text(
+          context.tr('诊断超时'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.colors.text,
+            fontSize: 28,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.7,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context.tr('等待超过 120 秒仍未收到诊断结果。请检查网络，或退出后重新选择照片。'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.colors.secondary,
+            fontSize: 14,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 28),
+        const SurfaceCard(
+          radius: 22,
+          padding: EdgeInsets.all(18),
+          child: Column(
+            children: [
+              _ProcessRow(
+                icon: Icons.wifi_off_rounded,
+                label: '网络连接可能较慢',
+                description: '请检查设备网络连接，并确认诊断服务可用',
+              ),
+              SizedBox(height: 18),
+              _ProcessRow(
+                icon: Icons.hourglass_empty_rounded,
+                label: '服务可能正在繁忙',
+                description: '稍后重试通常可以恢复',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 26),
+        GradientButton(
+          key: const Key('timeout-exit-button'),
+          label: context.tr('退出并重新选择'),
+          icon: Icons.arrow_back_rounded,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: OutlinedButton.icon(
+            key: const Key('timeout-feedback-button'),
+            onPressed: _feedbackSubmitting || _feedbackSubmitted
+                ? null
+                : _submitTimeoutFeedback,
+            icon: _feedbackSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    _feedbackSubmitted
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.feedback_outlined,
+                    size: 19,
+                  ),
+            label: Text(context.tr(_feedbackSubmitted ? '反馈已提交' : '反馈超时问题')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitTimeoutFeedback() async {
+    if (_feedbackSubmitting || _feedbackSubmitted) return;
+    setState(() => _feedbackSubmitting = true);
+    try {
+      await widget.api.submitDiagnosisFeedback(
+        event: 'timeout',
+        language: Localizations.localeOf(context).languageCode,
+        elapsedSeconds: widget.api.diagnosisTimeout.inSeconds,
+        error: _timeoutDetail,
+        platform: defaultTargetPlatform.name,
+      );
+      if (!mounted) return;
+      setState(() {
+        _feedbackSubmitting = false;
+        _feedbackSubmitted = true;
+      });
+      showAppToast(context, context.tr('反馈已提交'));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _feedbackSubmitting = false);
+      showAppToast(context, context.tr('反馈提交失败，请稍后重试'));
+    }
   }
 
   Widget _buildOrb() {

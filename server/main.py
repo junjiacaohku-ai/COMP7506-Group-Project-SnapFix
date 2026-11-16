@@ -1,9 +1,12 @@
 """SnapFix FastAPI 入口:API 层,薄壳,业务在 pipeline.py。"""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from uuid import uuid4
+
 from fastapi import Depends, FastAPI, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import auth
 import db
@@ -114,6 +117,13 @@ class ManualDiagnoseRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     feedback: str
 
+
+class DiagnosisFeedbackRequest(BaseModel):
+    event: str = Field(default="timeout", pattern="^(timeout|cancelled|other)$")
+    language: str = Field(default="en", pattern="^(en|zh)$")
+    elapsed_seconds: int = Field(default=120, ge=1, le=3600)
+    error: str = Field(default="", max_length=1000)
+    platform: str = Field(default="", max_length=40)
 
 class ReportRequest(BaseModel):
     lang: str = "zh"
@@ -341,6 +351,45 @@ def diagnose_manual(
     except pipeline.AnalysisError as e:
         raise HTTPException(status_code=e.status_code, detail=str(e))
 
+
+@app.post("/api/diagnosis-feedback", status_code=201)
+def record_diagnosis_feedback(
+    req: DiagnosisFeedbackRequest, user: dict = Depends(current_user)
+):
+    feedback_id = str(uuid4())
+    created_at = datetime.now(timezone.utc).isoformat()
+    with db.connect() as conn:
+        conn.execute(
+            "INSERT INTO diagnosis_feedback"
+            "(id,user_id,event,language,elapsed_seconds,error,platform,created_at) "
+            "VALUES(?,?,?,?,?,?,?,?)",
+            (
+                feedback_id,
+                user["id"],
+                req.event,
+                req.language,
+                req.elapsed_seconds,
+                req.error.strip() or None,
+                req.platform.strip() or None,
+                created_at,
+            ),
+        )
+    return {
+        "id": feedback_id,
+        "status": "recorded",
+        "created_at": created_at,
+    }
+
+@app.get("/api/diagnosis-feedback")
+def list_diagnosis_feedback(user: dict = Depends(current_user)):
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT id,event,language,elapsed_seconds,error,platform,created_at "
+            "FROM diagnosis_feedback WHERE user_id=? "
+            "ORDER BY created_at DESC LIMIT 100",
+            (user["id"],),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 @app.get("/api/sessions")
 def list_sessions(user: dict = Depends(current_user)):

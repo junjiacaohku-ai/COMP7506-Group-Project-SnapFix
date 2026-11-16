@@ -110,6 +110,24 @@ Future<void> tapText(WidgetTester tester, String text) {
 }
 
 void main() {
+  test('manual diagnosis notifies the completion callback', () async {
+    final api = ApiClient(
+      client: MockClient(
+        (request) async => http.Response(
+          jsonEncode(fixture()),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
+    );
+    Session? completed;
+    api.onDiagnosisCompleted = (session) => completed = session;
+
+    final result = await api.diagnoseManual('Bosch', 'E24');
+
+    expect(completed?.id, result.id);
+  });
+
   testWidgets('chunk source expands and step feedback can be undone', (
     tester,
   ) async {

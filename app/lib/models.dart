@@ -261,6 +261,45 @@ String repairStatusLabel(String status) => switch (status) {
   _ => (label: '安全拒答', color: colors.red, icon: Icons.gpp_maybe_outlined),
 };
 
+class DiagnosisFeedback {
+  const DiagnosisFeedback({
+    required this.id,
+    required this.event,
+    required this.language,
+    required this.elapsedSeconds,
+    required this.createdAt,
+    this.error,
+    this.platform,
+  });
+
+  final String id;
+  final String event;
+  final String language;
+  final int elapsedSeconds;
+  final DateTime createdAt;
+  final String? error;
+  final String? platform;
+
+  factory DiagnosisFeedback.fromJson(Map<String, dynamic> json) {
+    return DiagnosisFeedback(
+      id: json['id'] as String,
+      event: json['event'] as String? ?? 'other',
+      language: json['language'] as String? ?? 'en',
+      elapsedSeconds: (json['elapsed_seconds'] as num?)?.toInt() ?? 0,
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      error: json['error'] as String?,
+      platform: json['platform'] as String?,
+    );
+  }
+}
+
+String diagnosisFeedbackEventLabel(String event) => switch (event) {
+  'timeout' => '超时反馈',
+  'cancelled' => '分析已取消',
+  _ => '其他诊断反馈',
+};
 String formatDateTime(DateTime t) {
   String two(int v) => v.toString().padLeft(2, '0');
   return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';

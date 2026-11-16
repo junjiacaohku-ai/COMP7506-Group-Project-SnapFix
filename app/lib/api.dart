@@ -9,10 +9,17 @@ import 'models.dart';
 const kApiBaseUrl = 'http://127.0.0.1:8001';
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode});
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.isTimeout = false,
+    this.isCancelled = false,
+  });
 
   final String message;
   final int? statusCode;
+  final bool isTimeout;
+  final bool isCancelled;
 
   bool get isQualityError => statusCode == 422;
 
@@ -20,12 +27,27 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class DiagnosisCancellation {
+  final Completer<void> _completer = Completer<void>();
+
+  bool get isCancelled => _completer.isCompleted;
+  Future<void> get whenCancelled => _completer.future;
+
+  void cancel() {
+    if (!_completer.isCompleted) _completer.complete();
+  }
+}
+
 class ApiClient {
-  ApiClient({http.Client? client, this.baseUrl = kApiBaseUrl})
-    : _client = client ?? http.Client();
+  ApiClient({
+    http.Client? client,
+    this.baseUrl = kApiBaseUrl,
+    this.diagnosisTimeout = const Duration(seconds: 120),
+  }) : _client = client ?? http.Client();
 
   final http.Client _client;
   final String baseUrl;
+  final Duration diagnosisTimeout;
   String languageCode = 'en';
   String? _accessToken;
   void Function()? onUnauthorized;
@@ -252,36 +274,126 @@ class ApiClient {
     );
   }
 
-  Future<Session> analyzeImage(String filePath) async {
-    final request = http.MultipartRequest('POST', _uri('/api/analyze/image'))
-      ..headers.addAll(_authHeaders)
-      ..fields['language'] = languageCode
-      ..files.add(await http.MultipartFile.fromPath('file', filePath));
-    final streamed = await _client
-        .send(request)
-        .timeout(const Duration(seconds: 240));
-    final body = await streamed.stream.bytesToString();
-    final json = _decode(streamed.statusCode, body);
+  Future<void> submitDiagnosisFeedback({
+    required String event,
+    required String language,
+    required int elapsedSeconds,
+    String? error,
+    String? platform,
+  }) async {
+    await _send(
+      () => _client.post(
+        _uri('/api/diagnosis-feedback'),
+        headers: _jsonHeaders,
+        body: jsonEncode({
+          'event': event,
+          'language': language,
+          'elapsed_seconds': elapsedSeconds,
+          'error': error ?? '',
+          'platform': platform ?? '',
+        }),
+      ),
+    );
+  }
+
+  Future<Session> analyzeImage(
+    String filePath, {
+    DiagnosisCancellation? cancellation,
+  }) async {
+    final abort = Completer<void>();
+    final request =
+        http.AbortableMultipartRequest(
+            'POST',
+            _uri('/api/analyze/image'),
+            abortTrigger: abort.future,
+          )
+          ..headers.addAll(_authHeaders)
+          ..fields['language'] = languageCode
+          ..files.add(await http.MultipartFile.fromPath('file', filePath));
+    final json = await _sendAnalysis(request, abort, cancellation);
     final session = Session.fromJson(json as Map<String, dynamic>);
     onDiagnosisCompleted?.call(session);
     return session;
   }
 
-  Future<Session> diagnoseManual(String brand, String errorCode) async {
-    final json = await _send(
-      () => _client.post(
-        _uri('/api/diagnose/manual'),
-        headers: _jsonHeaders,
-        body: jsonEncode({
-          'brand': brand,
-          'error_code': errorCode,
-          'language': languageCode,
-        }),
-      ),
-    );
+  Future<Session> diagnoseManual(
+    String brand,
+    String errorCode, {
+    DiagnosisCancellation? cancellation,
+  }) async {
+    final abort = Completer<void>();
+    final request =
+        http.AbortableRequest(
+            'POST',
+            _uri('/api/diagnose/manual'),
+            abortTrigger: abort.future,
+          )
+          ..headers.addAll(_jsonHeaders)
+          ..body = jsonEncode({
+            'brand': brand,
+            'error_code': errorCode,
+            'language': languageCode,
+          });
+    final json = await _sendAnalysis(request, abort, cancellation);
     final session = Session.fromJson(json as Map<String, dynamic>);
     onDiagnosisCompleted?.call(session);
     return session;
+  }
+
+  Future<dynamic> _sendAnalysis(
+    http.Abortable request,
+    Completer<void> abort,
+    DiagnosisCancellation? cancellation,
+  ) async {
+    var timedOut = false;
+    final timer = Timer(diagnosisTimeout, () {
+      timedOut = true;
+      if (!abort.isCompleted) abort.complete();
+    });
+    unawaited(
+      cancellation?.whenCancelled.then((_) {
+            if (!abort.isCompleted) abort.complete();
+          }) ??
+          Future<void>.value(),
+    );
+    try {
+      final operation = () async {
+        final streamed = await _client.send(request);
+        final body = await streamed.stream.bytesToString();
+        return _decode(streamed.statusCode, body);
+      }();
+      return await operation.timeout(diagnosisTimeout);
+    } on http.RequestAbortedException {
+      if (cancellation?.isCancelled ?? false) {
+        throw const ApiException('分析已取消', isCancelled: true);
+      }
+      if (timedOut) {
+        throw const ApiException('分析超时，请稍后重试', isTimeout: true);
+      }
+      throw const ApiException('无法连接后端服务');
+    } on TimeoutException {
+      if (!abort.isCompleted) abort.complete();
+      throw const ApiException('分析超时，请稍后重试', isTimeout: true);
+    } on SocketException {
+      throw const ApiException('无法连接后端服务');
+    } on http.ClientException {
+      if (cancellation?.isCancelled ?? false) {
+        throw const ApiException('分析已取消', isCancelled: true);
+      }
+      throw const ApiException('无法连接后端服务');
+    } finally {
+      timer.cancel();
+    }
+  }
+
+  Future<List<DiagnosisFeedback>> listDiagnosisFeedback() async {
+    final json = await _send(
+      () => _client.get(_uri('/api/diagnosis-feedback'), headers: _authHeaders),
+    );
+    return [
+      for (final item in json as List)
+        DiagnosisFeedback.fromJson(item as Map<String, dynamic>),
+    ];
   }
 
   Future<List<Session>> listSessions() async {

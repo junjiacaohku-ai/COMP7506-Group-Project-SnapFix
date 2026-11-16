@@ -335,7 +335,9 @@ class ApiClient {
             'language': languageCode,
           });
     final json = await _sendAnalysis(request, abort, cancellation);
-    return Session.fromJson(json as Map<String, dynamic>);
+    final session = Session.fromJson(json as Map<String, dynamic>);
+    onDiagnosisCompleted?.call(session);
+    return session;
   }
 
   Future<dynamic> _sendAnalysis(

@@ -130,7 +130,7 @@ const _english = <String, String>{
   '诊断超时': 'Diagnosis timed out',
   '等待超过 120 秒仍未收到诊断结果。请检查网络，或退出后重新选择照片。': 'No diagnosis result was received after 120 seconds. Check your connection or exit and choose another photo.',
   '网络连接可能较慢': 'Your connection may be slow',
-  '请确认模拟器仍能访问后端服务': 'Check that the emulator can still reach the backend',
+  '请检查设备网络连接，并确认诊断服务可用': 'Check your device connection and confirm that the diagnosis service is available',
   '服务可能正在繁忙': 'The service may be busy',
   '稍后重试通常可以恢复': 'Retrying later usually resolves this',
   '退出并重新选择': 'Exit and choose again',

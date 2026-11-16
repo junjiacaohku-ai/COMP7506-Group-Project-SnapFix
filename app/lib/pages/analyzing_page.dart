@@ -315,7 +315,7 @@ class _AnalyzingPageState extends State<AnalyzingPage>
               _ProcessRow(
                 icon: Icons.wifi_off_rounded,
                 label: '网络连接可能较慢',
-                description: '请确认模拟器仍能访问后端服务',
+                description: '请检查设备网络连接，并确认诊断服务可用',
               ),
               SizedBox(height: 18),
               _ProcessRow(

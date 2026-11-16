@@ -62,7 +62,7 @@ Zhang Fan & \\
 
 \vspace{3mm}
 \begin{abstract}
-SnapFix is a smart-home maintenance application for tenants and household users who can observe a problem but may not know the appliance model, relevant instructions, or safest next step. The application combines Qwen3-VL visual extraction, BM25 manual retrieval, deterministic safety rules, chunk-level citation validation, persistent repair progress, and editable Chinese/English repair requests. Rather than treating a model response as authoritative, SnapFix separates visible observations from possible causes and withholds unsupported do-it-yourself instructions. The current implementation includes real accounts, source-linked guidance, safety refusal, and a repair archive. Evaluation covers 46 backend tests, five Flutter tests, 26 controlled image-quality variants, and selected real Qwen workflows. These results demonstrate implementation and workflow reliability; they do not establish universal diagnostic accuracy.
+SnapFix is a smart-home maintenance application for tenants and household users who can observe a problem but may not know the appliance model, relevant instructions, or safest next step. The application combines Qwen3-VL visual extraction, BM25 manual retrieval, deterministic safety rules, chunk-level citation validation, persistent repair progress, and editable Chinese/English repair requests. Rather than treating a model response as authoritative, SnapFix separates visible observations from possible causes and withholds unsupported do-it-yourself instructions. The shared Flutter implementation targets iOS and Android and includes accounts, source-linked guidance, safety refusal, a repair archive, cancellable diagnosis requests, and per-user diagnostic feedback history. Evaluation covers 48 backend tests, 12 Flutter tests, 26 controlled image-quality variants, Android Emulator workflows, selected real Qwen workflows, and successful Android Debug and unsigned iOS Release builds. These results demonstrate implementation and workflow reliability; they do not establish universal diagnostic accuracy or physical-device coverage.
 \end{abstract}
 
 \vspace{2mm}
@@ -112,10 +112,10 @@ The product principle is therefore \textbf{``Snap it. Fix it. Or report it.''} D
 
 \subsection{Design and features}
 
-The mobile flow supports camera or library input, a manual error-code path, analysis progress, a diagnosis report, step feedback, repair status, an archive, and bilingual repair drafts. The interface supports English and Simplified Chinese, light/dark/system appearance, and reduced motion. Real accounts support email, Sign in with Apple, and Google OAuth, with per-user isolation of sessions and preferences.
+The mobile flow supports camera or library input, a manual error-code path, analysis progress, a diagnosis report, step feedback, repair status, an archive, and bilingual repair drafts. A shared Flutter codebase targets iOS and Android. The interface supports English and Simplified Chinese, light/dark/system appearance, and reduced motion. Account functionality includes email, Sign in with Apple, and Google OAuth integrations, with per-user isolation of sessions, preferences, and diagnostic feedback.
 
 \begin{center}
-\begin{tabularx}{\textwidth}{l X}
+\begin{tabularx}{\textwidth}{p{34mm} X}
 \toprule
 \textbf{Feature} & \textbf{Delivered behavior} \\
 \midrule
@@ -126,6 +126,8 @@ Safety guardrails & Applies deterministic rules before generation and again to g
 Repair progress & Persists done, skipped, and not-useful feedback; repeated taps undo feedback. \\
 Repair status & Supports investigating, awaiting-repair, and resolved states with archive filters. \\
 Bilingual reports & Allows editing, saving, resetting, copying, and sharing Chinese or English drafts. \\
+Cancellable diagnosis & Aborts the underlying request after 120 seconds without a response and provides localized timeout and exit actions. \\
+Feedback history & Stores timeout feedback under the current account and presents a read-only history in Profile. \\
 Explicit demo mode & Uses labelled deterministic scenarios without model credentials; unknown images are rejected. \\
 \bottomrule
 \end{tabularx}
@@ -141,7 +143,7 @@ Explicit demo mode & Uses labelled deterministic scenarios without model credent
 
 \subsection{Architecture}
 
-SnapFix uses a Flutter application and an authenticated FastAPI backend. Qwen3-VL is the currently verified live provider through an OpenAI-compatible API; Gemini remains an optional provider. SQLite stores user accounts, token hashes, diagnoses, step feedback, repair status, report drafts, and the imported manual corpus. Original photographs are not written to the database.
+SnapFix uses a Flutter application and an authenticated FastAPI backend. Qwen3-VL is the currently verified live provider through an OpenAI-compatible API; Gemini remains an optional provider. SQLite stores user accounts, token hashes, diagnoses, step feedback, repair status, report drafts, diagnostic feedback, and the imported manual corpus. Original photographs are not written to the database.
 
 \begin{figure}[htbp]
   \centering
@@ -164,23 +166,35 @@ SnapFix uses a Flutter application and an authenticated FastAPI backend. Qwen3-V
 
 This design deliberately separates probabilistic model output from deterministic safety and evidence checks. Low-confidence recognition, missing manual coverage, invalid citations, and unsafe generated content all lead to an explicit non-DIY outcome. A live provider failure returns an error and never substitutes an unrelated mock diagnosis.
 
+\subsection{Timeout and diagnostic feedback}
+
+Diagnosis requests are cancellable and stop waiting after 120 seconds without a response. A localized timeout page supports navigation back, exiting to choose another input, and submitting a timeout report. \texttt{POST /api/diagnosis-feedback} records the event, interface language, elapsed time, platform, and error summary under the authenticated account. \texttt{GET /api/diagnosis-feedback} returns only that account's recent records. Client-side abort prevents indefinite waiting but does not guarantee cancellation of model work already started by the backend or provider.
+
 \section{Implementation and Evaluation}
 
 \subsection{Corpus and provenance}
 
 The current corpus contains 16 public documents and 2,032 text chunks. Records include source URLs, PDF pages, stable chunk IDs, source hashes, and extraction metadata. The extraction audit records sparse and undecodable pages, while source-bound corrections remain linked to the original file hash. Public demonstration photographs include author, licence, hash, and usage metadata. Appearance images are used for workflow and image-quality testing, not as confirmed fault examples.
 
+\subsection{Reliability and cross-platform implementation}
+
+The shared Flutter application targets iOS and Android. Android hardening includes compileSdk 37, core-library desugaring, Kotlin cache compatibility, and recovery of image-picker results through \texttt{retrieveLostData()}. The recovery path has been implemented and compile-tested, but an operating-system process-death scenario has not been deliberately reproduced. FE-1 validation exercised Android Emulator login, Home, localized timeout pages, feedback submission, SQLite persistence, and feedback history using a mock backend. The integrated mainline also passes Android Debug and unsigned iOS Release builds.
+
 \subsection{Current verification}
 
 \begin{center}
 \small
-\begin{tabularx}{\textwidth}{p{37mm} p{27mm} X}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{37mm} >{\raggedright\arraybackslash}p{32mm} >{\raggedright\arraybackslash}X}
 \toprule
 \textbf{Verification} & \textbf{Current result} & \textbf{Scope} \\
 \midrule
-Backend regression & 46 passed & Corpus, retrieval, safety, image quality, account isolation, status, and report drafts \\
-Flutter tests & 5 passed & Model parsing and product interaction logic \\
+Backend regression & 48 passed & Corpus, retrieval, safety, image quality, account isolation, diagnostic feedback, status, and report drafts \\
+Flutter tests & 12 passed & Models, product interactions, timeout, cancellation, feedback history, and completion-callback regression \\
 Flutter analysis & No issues found & Static Dart checks, not device compatibility \\
+Android Emulator & FE-1 flows checked & Login, Home, timeout, feedback submission and history with a mock backend \\
+Android Debug APK & Build succeeded & compileSdk 37 build on the integrated mainline \\
+iOS Simulator & Core workflows checked & Simulator behavior, not physical-device validation \\
+iOS Release & Build succeeded, unsigned & Optimized compilation and linking only; no signing or device installation \\
 Image-quality variants & 26 controlled cases & Dark/blur retake behavior, not diagnostic accuracy \\
 Real Qwen HTTP flows & Router, microwave, Bosch E24 & Live provider integration and source validation on those scenarios \\
 Manual corpus & 16 documents / 2,032 chunks & Available evidence coverage, not universal appliance support \\
@@ -188,11 +202,11 @@ Manual corpus & 16 documents / 2,032 chunks & Available evidence coverage, not u
 \end{tabularx}
 \end{center}
 
-The backend suite uses an isolated temporary database and does not call a live model. Flutter tests cover model parsing, source expansion, feedback and undo, status confirmation, and report editing across language switches. Real HTTP checks confirmed Qwen source labels, microwave safety refusal, an English safety report, and Bosch E24 guidance linked to real manual chunks.
+The backend suite uses an isolated temporary database and does not call a live model. Feedback tests verify that two accounts receive only their own history and that unauthenticated requests are rejected. The manual-diagnosis completion-callback regression test fails against the previous implementation and passes after the fix. Other Flutter tests cover model parsing, source expansion, feedback and undo, status confirmation, timeout and cancellation, feedback history, and report editing across language switches. Real HTTP checks confirmed Qwen source labels, microwave safety refusal, an English safety report, and Bosch E24 guidance linked to real manual chunks.
 
 \subsection{Limitations}
 
-The current build is a course project and local development deployment, not a public repair service. The corpus covers a limited set of devices, and the present evaluation does not establish broad fault-recognition accuracy. Camera permissions, notifications, system sharing, and OAuth still require physical-device validation. Future work should expand confirmed-fault photographs, improve manual coverage, evaluate a larger labelled dataset, and add production monitoring and public privacy documentation without weakening citation or safety requirements.
+The current build is a course project and local development deployment, not a public repair service. The corpus covers a limited set of devices, and the present evaluation does not establish broad fault-recognition accuracy. Android validation uses an emulator rather than a physical Android device. The iOS Release build was not signed or installed on a device; camera permissions, notifications, system sharing, and OAuth still require physical-device validation. Android process-death recovery has not been explicitly reproduced, and diagnostic feedback history is currently read-only. Future work should expand confirmed-fault photographs, improve manual coverage, evaluate a larger labelled dataset, and add production monitoring and public privacy documentation without weakening citation or safety requirements.
 
 \section{Contributions}
 

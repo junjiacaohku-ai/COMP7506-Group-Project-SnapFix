@@ -14,6 +14,7 @@ import oauth
 import pipeline
 import providers
 import retrieval
+import safety_gate
 from pipeline import QualityError
 
 app = FastAPI(title="SnapFix API", version="1.1.0")
@@ -486,6 +487,30 @@ def save_report_draft(
     return {"lang": req.lang, "content": content}
 
 
+def _localized_reason(session: dict, language: str) -> str:
+    reason = session["decision_reason"] or ""
+    if not reason:
+        return ""
+    has_chinese = any("\u4e00" <= char <= "\u9fff" for char in reason)
+    if (language == "zh") == has_chinese:
+        return reason
+
+    verdict = safety_gate.check(session["device_category"], reason)
+    if verdict.refused:
+        localized = safety_gate.localize(verdict, language)
+        return f"{localized.reason}{localized.advice}"
+    if language == "en":
+        translated = {
+            "Internet 红灯多为接线或拨号问题,非破坏性排查,约 10 分钟。": "WAN cabling or dial-up issue; unconfirmed.",
+            "排水泵滤网堵塞,非破坏性操作,工具只需一枚硬币,约 15 分钟。": "Drain pump filter blockage; unconfirmed.",
+            "板式家具组装,工具只需螺丝刀与锤子,约 40 分钟,两人更佳。": "Flat-pack furniture assembly assistance requested.",
+            "微波炉内部高压电容断电后仍可致命,属于高危类目,不提供任何拆解步骤。": "High-risk microwave fault; no DIY diagnosis provided.",
+            "热水器属房东配置,内部维修责任在房东;可先自行尝试复位键。": "Possible water heater fault requiring landlord inspection.",
+        }.get(reason)
+        return translated or "The exact cause requires further inspection of the appliance."
+    return "具体故障原因需由维修人员进一步检查。"
+
+
 @app.post("/api/sessions/{session_id}/report")
 def generate_report(
     session_id: str,
@@ -528,21 +553,7 @@ def generate_report(
     model = s["model"]
     code = s["error_code"]
     high_risk = s["safety_refused"] or s["decision"] == "professional"
-    reason_en = {
-        "Internet 红灯多为接线或拨号问题,非破坏性排查,约 10 分钟。": "WAN cabling or dial-up issue; unconfirmed.",
-        "排水泵滤网堵塞,非破坏性操作,工具只需一枚硬币,约 15 分钟。": "Drain pump filter blockage; unconfirmed.",
-        "板式家具组装,工具只需螺丝刀与锤子,约 40 分钟,两人更佳。": "Flat-pack furniture assembly assistance requested.",
-        "微波炉内部高压电容断电后仍可致命,属于高危类目,不提供任何拆解步骤。": "High-risk microwave fault; no DIY diagnosis provided.",
-        "热水器属房东配置,内部维修责任在房东;可先自行尝试复位键。": "Possible water heater fault requiring landlord inspection.",
-    }.get(s["decision_reason"])
-    reason_text = s["decision_reason"] or ""
-    if (
-        reason_en is None
-        and reason_text
-        and s["diagnosis_source"] != "mock"
-        and not any("\u4e00" <= char <= "\u9fff" for char in reason_text)
-    ):
-        reason_en = reason_text
+    reason_text = _localized_reason(s, req.lang)
     if req.lang == "en":
         tried = ", ".join(
             f"step {st['idx']}" for st in s["steps"] if st["feedback"] == "done"
@@ -556,8 +567,8 @@ def generate_report(
             f"Observed issue: Error code {code} reported by the user."
             if code else "Observed issue: Appliance fault reported by the user."
         )
-        if reason_en:
-            lines.append(f"Possible cause: {reason_en}")
+        if reason_text:
+            lines.append(f"Possible cause: {reason_text}")
         lines.append(f"Steps already tried: {tried}.")
         if high_risk:
             lines.append(
@@ -578,8 +589,8 @@ def generate_report(
         if model:
             lines.append(f"型号:{model}")
         lines.append(f"故障现象:用户报告错误码 {code}。" if code else "故障现象:用户报告设备故障。")
-        if s["decision_reason"]:
-            lines.append(f"可能原因(未经确认):{s['decision_reason']}")
+        if reason_text:
+            lines.append(f"可能原因(未经确认):{reason_text}")
         lines.append(f"已尝试步骤:{tried}。")
         if high_risk:
             lines.append("安全注意:高风险设备,请勿自行拆解;断电后内部元件仍可能存在危险。")

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def upload(client, headers, name='router.jpg', source='public-01.jpg'):
+def upload(client, headers, name='router.jpg', source='public-01.jpg', language=None):
     data = (
         Path(__file__).resolve().parents[2]
         / 'docs/demo-assets/public'
@@ -10,6 +10,7 @@ def upload(client, headers, name='router.jpg', source='public-01.jpg'):
     return client.post(
         '/api/analyze/image',
         files={'file': (name, data, 'image/jpeg')},
+        data={} if language is None else {'language': language},
         headers=headers,
     )
 
@@ -219,3 +220,47 @@ def test_feedback_history_is_account_scoped(client, auth_headers, user):
     finally:
         with db.connect() as conn:
             conn.execute('DELETE FROM users WHERE id=?', (other['id'],))
+
+
+
+def test_report_localizes_decision_reason_in_both_directions(client, auth_headers):
+    english_session = upload(
+        client, auth_headers, 'microwave.jpg', language='en'
+    ).json()
+    english_url = f"/api/sessions/{english_session['id']}/report"
+    import db
+
+    with db.connect() as conn:
+        conn.execute(
+            "UPDATE sessions SET decision_reason=?, diagnosis_source='qwen' WHERE id=?",
+            (
+                'Microwave components can retain a lethal electrical charge after '
+                'unplugging. Stop and contact a qualified technician.',
+                english_session['id'],
+            ),
+        )
+
+    english_report = client.post(
+        english_url, json={'lang': 'en'}, headers=auth_headers
+    ).json()['content']
+    assert 'Possible cause: Microwave components' in english_report
+
+    chinese_report = client.post(
+        english_url, json={'lang': 'zh'}, headers=auth_headers
+    ).json()['content']
+    assert '可能原因(未经确认):微波炉内部可能保留危险电量。' in chinese_report
+    assert 'Microwave components' not in chinese_report
+    assert 'Stop and contact' not in chinese_report
+
+    chinese_session = upload(client, auth_headers, 'microwave.jpg').json()
+    translated_report = client.post(
+        f"/api/sessions/{chinese_session['id']}/report",
+        json={'lang': 'en'},
+        headers=auth_headers,
+    ).json()['content']
+    reason_line = next(
+        line for line in translated_report.splitlines()
+        if line.startswith('Possible cause:')
+    )
+    assert 'Microwave components' in reason_line
+    assert not any('\u4e00' <= char <= '\u9fff' for char in reason_line)
